@@ -1,1 +1,2 @@
-# golizilla
+# Golizilla 🦖
+Goli + Godzilla

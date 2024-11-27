@@ -11,8 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
-
 // SetupDB initializes and returns a database connection
 func setupDB(cfg *config.Config) (*gorm.DB, error) {
 	// Retrieve the database URL from environment variables

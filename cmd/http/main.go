@@ -1,19 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"time"
 
 	"golizilla/config"
 	"golizilla/persistence/database"
 	"golizilla/route"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	"gorm.io/gorm"
 )
 
@@ -39,26 +32,7 @@ func main() {
 		return
 	}
 
-	// Initialize Fiber app with middleware
-	app := fiber.New()
+	// Start API
+	route.RunServer(cfg, gormDB)
 
-	// Add middleware for logging, panic recovery, and CORS
-	app.Use(logger.New())
-	app.Use(recover.New())
-	app.Use(cors.New())
-
-	// Add additional middleware for rate limiting
-	app.Use(limiter.New(limiter.Config{
-		Max:        100,
-		Expiration: 1 * time.Minute,
-	}))
-
-	// Grouping routes for users
-	userGroup := app.Group("/users")
-	route.SetupUserRoutes(userGroup, gormDB)
-
-	// Start the server
-	host := cfg.Host
-	port := cfg.Port
-	log.Fatal(app.Listen(fmt.Sprintf("%s:%d", host, port)))
 }

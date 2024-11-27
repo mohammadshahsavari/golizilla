@@ -9,7 +9,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupUserRoutes(app fiber.Router, db *gorm.DB) {
+func SetupUserRoutes(app *fiber.App, db *gorm.DB) {
+	// Grouping routes for users
+	userGroup := app.Group("/users")
 	// Create repository
 	userRepo := repository.NewUserRepository(db)
 
@@ -20,6 +22,6 @@ func SetupUserRoutes(app fiber.Router, db *gorm.DB) {
 	userHandler := handler.NewUserHandler(userService)
 
 	// Define routes
-	app.Post("/", userHandler.CreateUser)
-	app.Get("/:id", userHandler.GetUserByID)
+	userGroup.Post("/", userHandler.CreateUser)
+	userGroup.Get("/:id", userHandler.GetUserByID)
 }

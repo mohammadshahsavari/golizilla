@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"golizilla/domain/model"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type IUserRepository interface {
 	Create(user *model.User) error
-	FindByID(id uint) (*model.User, error)
+	FindByID(id uuid.UUID) (*model.User, error)
 }
 
 type UserRepository struct {
@@ -31,7 +32,7 @@ func (r *UserRepository) Create(user *model.User) error {
 	return err
 }
 
-func (r *UserRepository) FindByID(id uint) (*model.User, error) {
+func (r *UserRepository) FindByID(id uuid.UUID) (*model.User, error) {
 	var user model.User
 	err := r.db.First(&user, id).Error
 	if err != nil {

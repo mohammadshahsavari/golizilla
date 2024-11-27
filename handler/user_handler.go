@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"strconv"
-
-	"golizilla/domain/model"
+	"errors"
+	"golizilla/handler/presenter"
 	"golizilla/service"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
@@ -19,69 +19,55 @@ func NewUserHandler(userService service.IUserService) *UserHandler {
 	return &UserHandler{UserService: userService}
 }
 
-// CreateUser creates a new user
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
-	var user model.User
-
-	// Parse request body into user model
-	if err := c.BodyParser(&user); err != nil {
-		return respondWithError(c, fiber.StatusBadRequest, "Invalid request payload")
+	// Parse request body into CreateUserRequest
+	var request presenter.CreateUserRequest
+	if err := c.BodyParser(&request); err != nil {
+		return presenter.BadRequest(c, err)
 	}
+
+	// Validate the request
+	if err := request.Validate(); err != nil {
+		return presenter.BadRequest(c, err)
+	}
+
+	// Transform the request into a domain model
+	user := request.ToDomain()
 
 	// Attempt to save the user
-	if err := h.UserService.CreateUser(&user); err != nil {
-		// Log the error using the standard log package
-		c.Context().Logger().Printf("CreateUser error: %v", err)
-
-		// Handle specific errors such as unique constraint violation
-		if isDuplicateEntryError(err) {
-			return respondWithError(c, fiber.StatusConflict, "User with the given email or username already exists")
+	if err := h.UserService.CreateUser(user); err != nil {
+		// Check for PostgreSQL duplicate entry error
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == presenter.PostgresUniqueViolationCode {
+			return presenter.DuplicateEntry(c, err)
 		}
 
-		// Handle other internal errors
-		return respondWithError(c, fiber.StatusInternalServerError, "Failed to create user")
+		// Log and respond with an internal server error
+		c.Context().Logger().Printf("[CreateUser] Internal error: %v", err)
+		return presenter.InternalServerError(c, err)
 	}
 
-	// Successfully created user
-	return c.Status(fiber.StatusCreated).JSON(user)
+	// Respond with the created user
+	return presenter.Created(c, "User created successfully", presenter.NewUserResponse(user))
 }
 
-// GetUserByID retrieves a user by their ID
 func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
-	id, err := strconv.Atoi(c.Params("id"))
+	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return respondWithError(c, fiber.StatusBadRequest, "Invalid user ID")
+		return presenter.BadRequest(c, errors.New("invalid user ID format"))
 	}
 
 	// Attempt to fetch the user
-	user, err := h.UserService.GetUserByID(uint(id))
+	user, err := h.UserService.GetUserByID(id)
 	if err != nil {
-		// Log the error using the standard log package
-		c.Context().Logger().Printf("GetUserByID error: %v", err)
-
 		if err == gorm.ErrRecordNotFound {
-			return respondWithError(c, fiber.StatusNotFound, "User not found")
+			return presenter.NotFound(c, err)
 		}
 
-		// Handle other internal errors
-		return respondWithError(c, fiber.StatusInternalServerError, "Failed to fetch user")
+		// Log and respond with an internal server error
+		c.Context().Logger().Printf("[GetUserByID] Internal error: %v", err)
+		return presenter.InternalServerError(c, err)
 	}
 
-	// Successfully fetched user
-	return c.JSON(user)
-}
-
-// Helper function to handle responses with an error status code and message
-func respondWithError(c *fiber.Ctx, code int, message string) error {
-	return c.Status(code).JSON(fiber.Map{
-		"message": message,
-	})
-}
-
-// Helper function to check for unique constraint violation errors
-func isDuplicateEntryError(err error) bool {
-	if pgErr, ok := err.(*pgconn.PgError); ok {
-		return pgErr.Code == "23505" // 23505 is the PostgreSQL unique violation code
-	}
-	return false
+	// Respond with the fetched user
+	return presenter.OK(c, "User fetched successfully", presenter.NewUserResponse(user))
 }

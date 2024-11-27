@@ -14,7 +14,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/swagger"
 	"gorm.io/gorm"
 )
 
@@ -57,20 +56,6 @@ func main() {
 	// Grouping routes for users
 	userGroup := app.Group("/users")
 	route.SetupUserRoutes(userGroup, gormDB)
-
-	// Serve Swagger UI if needed, restricted to non-production environments
-	if cfg.Env != "production" {
-		// Serve static files from the docs directory if needed, with rate limiting
-		app.Use("/docs", limiter.New(limiter.Config{
-			Max:        10,
-			Expiration: 30 * time.Second,
-		}))
-		app.Static("/docs", "./docs")
-
-		app.Get("/swagger/*", swagger.New(swagger.Config{
-			URL: "/docs/swagger.json", // The URL where swagger.json is located
-		}))
-	}
 
 	// Start the server
 	host := cfg.Host

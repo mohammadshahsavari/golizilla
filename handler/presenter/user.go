@@ -19,6 +19,11 @@ type VerifyEmailRequest struct {
 	Code  string `json:"code"`
 }
 
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 // Validate validates the CreateUserRequest fields.
 func (r *CreateUserRequest) Validate() error {
 	if r.Username == "" {
@@ -39,6 +44,16 @@ func (r *VerifyEmailRequest) Validate() error {
 	}
 	if r.Code == "" {
 		return errors.New("verification code is required")
+	}
+	return nil
+}
+
+func (r *LoginRequest) Validate() error {
+	if r.Email == "" {
+		return errors.New("email is required")
+	}
+	if r.Password == "" {
+		return errors.New("password is required")
 	}
 	return nil
 }

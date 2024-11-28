@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type IUserService interface {
 	CreateUser(user *model.User) error
 	GetUserByID(id uuid.UUID) (*model.User, error)
 	VerifyEmail(email string, code string) error
+	AuthenticateUser(email string, password string) (*model.User, error)
 }
 
 type UserService struct {
@@ -46,6 +48,25 @@ func (s *UserService) VerifyEmail(email string, code string) error {
 	user.EmailVerificationExpiry = time.Time{}
 
 	return s.UserRepo.Update(user)
+}
+
+var ErrInvalidCredentials = errors.New("invalid credentials")
+
+func (s *UserService) AuthenticateUser(email string, password string) (*model.User, error) {
+	user, err := s.UserRepo.FindByEmail(email)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrInvalidCredentials
+		}
+		return nil, err
+	}
+
+	// Check if password matches
+	if !user.CheckPassword(password) {
+		return nil, ErrInvalidCredentials
+	}
+
+	return user, nil
 }
 
 func (s *UserService) GetUserByID(id uuid.UUID) (*model.User, error) {

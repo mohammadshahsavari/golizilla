@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -24,6 +25,9 @@ type Config struct {
 	EmailSMTPPort int
 	EmailUsername string
 	EmailPassword string
+
+	JWTSecretKey string
+	JWTExpiresIn time.Duration
 }
 
 // LoadConfig loads environment variables from the .env file and returns a Config struct
@@ -49,6 +53,9 @@ func LoadConfig() (*Config, error) {
 		EmailSMTPPort: getEnvAsInt("EMAIL_SMTP_PORT", 587),
 		EmailUsername: getEnv("EMAIL_USERNAME", ""),
 		EmailPassword: getEnv("EMAIL_PASSWORD", ""),
+
+		JWTSecretKey: getEnv("JWT_SECRET_KEY", "your-default-secret-key"),
+		JWTExpiresIn: time.Duration(getEnvAsInt("JWT_EXPIRES_IN", 86400)) * time.Second,
 	}
 
 	return cfg, nil

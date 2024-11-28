@@ -3,6 +3,10 @@ package utils
 import (
 	"crypto/rand"
 	"fmt"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 func GenerateRandomCode(length int) string {
@@ -18,4 +22,23 @@ func GenerateRandomCode(length int) string {
 		code += fmt.Sprintf("%d", b%10)
 	}
 	return code
+}
+
+func GenerateJWT(userID uuid.UUID, secretKey string, expiresIn time.Duration) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id": userID.String(),
+		"exp":     time.Now().Add(expiresIn).Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(secretKey))
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
+func ParseUUID(s string) (uuid.UUID, error) {
+	return uuid.Parse(s)
 }

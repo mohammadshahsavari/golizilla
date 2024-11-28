@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"golizilla/config"
 	"golizilla/handler/presenter"
 	"golizilla/service"
 	"golizilla/service/utils"
@@ -17,12 +18,14 @@ import (
 type UserHandler struct {
 	UserService  service.IUserService
 	EmailService service.IEmailService
+	Config       *config.Config
 }
 
-func NewUserHandler(userService service.IUserService, emailService service.IEmailService) *UserHandler {
+func NewUserHandler(userService service.IUserService, emailService service.IEmailService, cfg *config.Config) *UserHandler {
 	return &UserHandler{
 		UserService:  userService,
 		EmailService: emailService,
+		Config:       cfg,
 	}
 }
 
@@ -96,6 +99,71 @@ func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
 
 	// Respond with success
 	return presenter.OK(c, "Email verified successfully", nil)
+}
+
+func (h *UserHandler) Login(c *fiber.Ctx) error {
+	// Parse request body into LoginRequest
+	var request presenter.LoginRequest
+	if err := c.BodyParser(&request); err != nil {
+		return presenter.BadRequest(c, err)
+	}
+
+	// Validate the request
+	if err := request.Validate(); err != nil {
+		return presenter.BadRequest(c, err)
+	}
+
+	// Authenticate the user
+	user, err := h.UserService.AuthenticateUser(request.Email, request.Password)
+	if err != nil {
+		if err == service.ErrInvalidCredentials {
+			return presenter.Unauthorized(c, errors.New("invalid email or password"))
+		}
+		c.Context().Logger().Printf("[Login] Internal error: %v", err)
+		return presenter.InternalServerError(c, err)
+	}
+
+	// Check if user is active
+	if !user.IsActive {
+		return presenter.Forbidden(c, errors.New("email not verified"))
+	}
+
+	// Generate JWT token
+	tokenString, err := utils.GenerateJWT(user.ID, h.Config.JWTSecretKey, h.Config.JWTExpiresIn)
+	if err != nil {
+		c.Context().Logger().Printf("[Login] Failed to generate JWT: %v", err)
+		return presenter.InternalServerError(c, errors.New("failed to generate token"))
+	}
+
+	// Set JWT token in cookie
+	c.Cookie(&fiber.Cookie{
+		Name:     "auth_token",
+		Value:    tokenString,
+		Expires:  time.Now().Add(h.Config.JWTExpiresIn),
+		HTTPOnly: true,
+		Secure:   h.Config.Env == "production",
+		SameSite: "Strict",
+	})
+
+	// Respond with success
+	return presenter.OK(c, "Login successful", nil)
+}
+
+func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+
+	// Fetch user details
+	user, err := h.UserService.GetUserByID(userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return presenter.NotFound(c, errors.New("user not found"))
+		}
+		c.Context().Logger().Printf("[GetProfile] Internal error: %v", err)
+		return presenter.InternalServerError(c, err)
+	}
+
+	// Respond with user data
+	return presenter.OK(c, "User profile fetched successfully", presenter.NewUserResponse(user))
 }
 
 func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {

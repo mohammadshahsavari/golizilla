@@ -2,21 +2,26 @@ package model
 
 import "time"
 
+// Role represents a user role with specific permissions.
 type Role struct {
-	ID          uint         `gorm:"primaryKey" json:"id"`
-	Name        string       `gorm:"unique;not null" json:"name"` // e.g., "Super Admin", "Owner"
-	Description string       `json:"description"`
-	Permissions []Permission `gorm:"many2many:role_permissions" json:"permissions"`
+	ID          uint      `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+// Permission represents a specific operation a role can perform.
 type Permission struct {
-	ID          uint   `gorm:"primaryKey" json:"id"`
-	Name        string `gorm:"unique;not null" json:"name"` // e.g., "CREATE_QUESTIONNAIRE"
-	Description string `json:"description"`
+	ID          uint      `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-type UserRole struct {
-	UserID uint       `gorm:"primaryKey" json:"user_id"`
-	RoleID uint       `gorm:"primaryKey" json:"role_id"`
-	Expiry *time.Time `json:"expiry"` // Optional: Time-limited roles
+// RolePermission associates roles with their permissions.
+type RolePermission struct {
+	RoleID       uint `json:"role_id"`
+	PermissionID uint `json:"permission_id"`
 }

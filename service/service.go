@@ -1,4 +1,4 @@
-package rbac
+package service
 
 import (
 	"golizilla/domain/model"

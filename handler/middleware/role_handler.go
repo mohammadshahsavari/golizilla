@@ -1,18 +1,18 @@
-package rbac
+package middleware
 
 import (
 	"net/http"
 
-	"golizilla/service/rbac"
+	"golizilla/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 type RoleHandler struct {
-	roleService *rbac.RoleService
+	roleService *service.RoleService
 }
 
-func NewRoleHandler(roleService *rbac.RoleService) *RoleHandler {
+func NewRoleHandler(roleService *service.RoleService) *RoleHandler {
 	return &RoleHandler{roleService: roleService}
 }
 

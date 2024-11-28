@@ -262,3 +262,47 @@ func (h *UserHandler) generateAndSetToken(c *fiber.Ctx, user *model.User) error 
 	// Respond with success
 	return presenter.OK(c, "Login successful", nil)
 }
+
+func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+
+	// Fetch user details
+	user, err := h.UserService.GetUserByID(userID)
+	if err != nil {
+		c.Context().Logger().Printf("[Enable2FA] Internal error: %v", err)
+		return presenter.InternalServerError(c, err)
+	}
+
+	// Enable 2FA
+	user.IsTwoFAEnabled = true
+
+	// Update user in the database
+	if err := h.UserService.UpdateUser(user); err != nil {
+		c.Context().Logger().Printf("[Enable2FA] Failed to update user: %v", err)
+		return presenter.InternalServerError(c, err)
+	}
+
+	return presenter.OK(c, "Two-factor authentication enabled", nil)
+}
+
+func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+
+	// Fetch user details
+	user, err := h.UserService.GetUserByID(userID)
+	if err != nil {
+		c.Context().Logger().Printf("[Disable2FA] Internal error: %v", err)
+		return presenter.InternalServerError(c, err)
+	}
+
+	// Disable 2FA
+	user.IsTwoFAEnabled = false
+
+	// Update user in the database
+	if err := h.UserService.UpdateUser(user); err != nil {
+		c.Context().Logger().Printf("[Disable2FA] Failed to update user: %v", err)
+		return presenter.InternalServerError(c, err)
+	}
+
+	return presenter.OK(c, "Two-factor authentication disabled", nil)
+}

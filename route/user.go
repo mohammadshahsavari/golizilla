@@ -33,4 +33,6 @@ func SetupUserRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	// Protected routes
 	userGroup.Use(middleware.JWTMiddleware(cfg))
 	userGroup.Get("/profile", userHandler.GetProfile)
+	userGroup.Post("/enable-2fa", userHandler.Enable2FA)
+	userGroup.Post("/disable-2fa", userHandler.Disable2FA)
 }

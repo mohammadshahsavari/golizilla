@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"golizilla/config"
+	"golizilla/domain/model"
 	"golizilla/handler/presenter"
 	"golizilla/service"
 	"golizilla/service/utils"
@@ -128,25 +129,77 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		return presenter.Forbidden(c, errors.New("email not verified"))
 	}
 
-	// Generate JWT token
-	tokenString, err := utils.GenerateJWT(user.ID, h.Config.JWTSecretKey, h.Config.JWTExpiresIn)
-	if err != nil {
-		c.Context().Logger().Printf("[Login] Failed to generate JWT: %v", err)
-		return presenter.InternalServerError(c, errors.New("failed to generate token"))
+	// Check if 2FA is enabled
+	if user.IsTwoFAEnabled {
+		// Generate 2FA code
+		twoFACode := utils.GenerateRandomCode(6)
+		user.TwoFACode = twoFACode
+		user.TwoFACodeExpiry = time.Now().Add(10 * time.Minute)
+
+		// Update user in the database
+		if err := h.UserService.UpdateUser(user); err != nil {
+			c.Context().Logger().Printf("[Login] Failed to update user for 2FA: %v", err)
+			return presenter.InternalServerError(c, err)
+		}
+
+		// Send 2FA code via email
+		err := h.EmailService.SendEmail(
+			user.Email,
+			"Your 2FA Code",
+			fmt.Sprintf("Your 2FA code is: %s", twoFACode),
+		)
+		if err != nil {
+			c.Context().Logger().Printf("[Login] Failed to send 2FA email: %v", err)
+			return presenter.InternalServerError(c, errors.New("failed to send 2FA code"))
+		}
+
+		// Respond indicating that 2FA code has been sent
+		return presenter.OK(c, "2FA code sent to your email", nil)
 	}
 
-	// Set JWT token in cookie
-	c.Cookie(&fiber.Cookie{
-		Name:     "auth_token",
-		Value:    tokenString,
-		Expires:  time.Now().Add(h.Config.JWTExpiresIn),
-		HTTPOnly: true,
-		Secure:   h.Config.Env == "production",
-		SameSite: "Strict",
-	})
+	// If 2FA is not enabled, proceed to generate JWT token
+	return h.generateAndSetToken(c, user)
+}
 
-	// Respond with success
-	return presenter.OK(c, "Login successful", nil)
+func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
+	// Parse request body into Verify2FARequest
+	var request presenter.Verify2FARequest
+	if err := c.BodyParser(&request); err != nil {
+		return presenter.BadRequest(c, err)
+	}
+
+	// Validate the request
+	if err := request.Validate(); err != nil {
+		return presenter.BadRequest(c, err)
+	}
+
+	// Find the user by email
+	user, err := h.UserService.GetUserByEmail(request.Email)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return presenter.Unauthorized(c, errors.New("invalid email or 2FA code"))
+		}
+		c.Context().Logger().Printf("[VerifyLogin] Internal error: %v", err)
+		return presenter.InternalServerError(c, err)
+	}
+
+	// Check if 2FA code matches and hasn't expired
+	if user.TwoFACode != request.Code || time.Now().After(user.TwoFACodeExpiry) {
+		return presenter.Unauthorized(c, errors.New("invalid or expired 2FA code"))
+	}
+
+	// Clear the 2FA code fields
+	user.TwoFACode = ""
+	user.TwoFACodeExpiry = time.Time{}
+
+	// Update user in the database
+	if err := h.UserService.UpdateUser(user); err != nil {
+		c.Context().Logger().Printf("[VerifyLogin] Failed to update user: %v", err)
+		return presenter.InternalServerError(c, err)
+	}
+
+	// Generate JWT token and set cookie
+	return h.generateAndSetToken(c, user)
 }
 
 func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
@@ -186,4 +239,26 @@ func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
 
 	// Respond with the fetched user
 	return presenter.OK(c, "User fetched successfully", presenter.NewUserResponse(user))
+}
+
+func (h *UserHandler) generateAndSetToken(c *fiber.Ctx, user *model.User) error {
+	// Generate JWT token
+	tokenString, err := utils.GenerateJWT(user.ID, h.Config.JWTSecretKey, h.Config.JWTExpiresIn)
+	if err != nil {
+		c.Context().Logger().Printf("[generateAndSetToken] Failed to generate JWT: %v", err)
+		return presenter.InternalServerError(c, errors.New("failed to generate token"))
+	}
+
+	// Set JWT token in cookie
+	c.Cookie(&fiber.Cookie{
+		Name:     "auth_token",
+		Value:    tokenString,
+		Expires:  time.Now().Add(h.Config.JWTExpiresIn),
+		HTTPOnly: true,
+		Secure:   h.Config.Env == "production",
+		SameSite: "Strict",
+	})
+
+	// Respond with success
+	return presenter.OK(c, "Login successful", nil)
 }

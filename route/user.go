@@ -28,6 +28,7 @@ func SetupUserRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	userGroup.Post("/signup", userHandler.CreateUser)
 	userGroup.Post("/verify-signup", userHandler.VerifySignup)
 	userGroup.Post("/login", userHandler.Login)
+	userGroup.Post("/verify-login", userHandler.VerifyLogin)
 
 	// Protected routes
 	userGroup.Use(middleware.JWTMiddleware(cfg))

@@ -12,9 +12,11 @@ import (
 
 type IUserService interface {
 	CreateUser(user *model.User) error
-	GetUserByID(id uuid.UUID) (*model.User, error)
 	VerifyEmail(email string, code string) error
 	AuthenticateUser(email string, password string) (*model.User, error)
+	GetUserByID(id uuid.UUID) (*model.User, error)
+	GetUserByEmail(email string) (*model.User, error)
+	UpdateUser(user *model.User) error
 }
 
 type UserService struct {
@@ -71,4 +73,12 @@ func (s *UserService) AuthenticateUser(email string, password string) (*model.Us
 
 func (s *UserService) GetUserByID(id uuid.UUID) (*model.User, error) {
 	return s.UserRepo.FindByID(id)
+}
+
+func (s *UserService) GetUserByEmail(email string) (*model.User, error) {
+	return s.UserRepo.FindByEmail(email)
+}
+
+func (s *UserService) UpdateUser(user *model.User) error {
+	return s.UserRepo.Update(user)
 }

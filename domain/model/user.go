@@ -24,6 +24,9 @@ type User struct {
 	TwoFACodeExpiry         time.Time
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
+	FailedLoginAttempts     int  `gorm:"default:0"`
+	AccountLocked           bool `gorm:"default:false"`
+	AccountLockedUntil      time.Time
 }
 
 // BeforeCreate is a GORM hook to generate a UUID before creating a new record.

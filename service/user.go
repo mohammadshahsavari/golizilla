@@ -53,6 +53,7 @@ func (s *UserService) VerifyEmail(email string, code string) error {
 }
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
+var ErrAccountLocked = errors.New("account is locked due to multiple failed login attempts")
 
 func (s *UserService) AuthenticateUser(email string, password string) (*model.User, error) {
 	user, err := s.UserRepo.FindByEmail(email)
@@ -63,10 +64,28 @@ func (s *UserService) AuthenticateUser(email string, password string) (*model.Us
 		return nil, err
 	}
 
-	// Check if password matches
+	// Check if account is locked
+	if user.AccountLocked && time.Now().Before(user.AccountLockedUntil) {
+		return nil, ErrAccountLocked
+	}
+
+	// Check password
 	if !user.CheckPassword(password) {
+		// Increment failed login attempts
+		user.FailedLoginAttempts++
+		if user.FailedLoginAttempts >= 5 {
+			user.AccountLocked = true
+			user.AccountLockedUntil = time.Now().Add(15 * time.Minute)
+		}
+		s.UserRepo.Update(user)
 		return nil, ErrInvalidCredentials
 	}
+
+	// Reset failed login attempts on successful login
+	user.FailedLoginAttempts = 0
+	user.AccountLocked = false
+	user.AccountLockedUntil = time.Time{}
+	s.UserRepo.Update(user)
 
 	return user, nil
 }

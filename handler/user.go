@@ -149,8 +149,15 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 			fmt.Sprintf("Your 2FA code is: %s", twoFACode),
 		)
 		if err != nil {
-			c.Context().Logger().Printf("[Login] Failed to send 2FA email: %v", err)
-			return presenter.InternalServerError(c, errors.New("failed to send 2FA code"))
+			switch err {
+			case service.ErrInvalidCredentials:
+				return presenter.Unauthorized(c, errors.New("invalid email or password"))
+			case service.ErrAccountLocked:
+				return presenter.Forbidden(c, errors.New("account is locked. Please try again later"))
+			default:
+				c.Context().Logger().Printf("[Login] Internal error: %v", err)
+				return presenter.InternalServerError(c, err)
+			}
 		}
 
 		// Respond indicating that 2FA code has been sent
@@ -305,4 +312,18 @@ func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
 	}
 
 	return presenter.OK(c, "Two-factor authentication disabled", nil)
+}
+
+func (h *UserHandler) Logout(c *fiber.Ctx) error {
+	// Clear the auth_token cookie
+	c.Cookie(&fiber.Cookie{
+		Name:     "auth_token",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour), // Set expiry in the past
+		HTTPOnly: true,
+		Secure:   h.Config.Env == "production",
+		SameSite: "Strict",
+	})
+
+	return presenter.OK(c, "Logged out successfully", nil)
 }

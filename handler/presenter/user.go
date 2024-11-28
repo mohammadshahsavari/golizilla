@@ -3,6 +3,7 @@ package presenter
 import (
 	"errors"
 	"golizilla/domain/model"
+	"regexp"
 
 	"github.com/google/uuid"
 )
@@ -29,16 +30,18 @@ type Verify2FARequest struct {
 	Code  string `json:"code"`
 }
 
+var emailRegex = regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
+
 // Validate validates the CreateUserRequest fields.
 func (r *CreateUserRequest) Validate() error {
 	if r.Username == "" {
 		return errors.New("username is required")
 	}
-	if r.Email == "" {
-		return errors.New("email is required")
+	if r.Email == "" || !emailRegex.MatchString(r.Email) {
+		return errors.New("valid email is required")
 	}
-	if r.Password == "" {
-		return errors.New("password is required")
+	if len(r.Password) < 6 {
+		return errors.New("password must be at least 8 characters long")
 	}
 	return nil
 }

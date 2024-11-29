@@ -122,11 +122,14 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	// Authenticate the user
 	user, err := h.UserService.AuthenticateUser(request.Email, request.Password)
 	if err != nil {
-		if err == service.ErrInvalidCredentials {
+		if errors.Is(err, service.ErrInvalidCredentials) {
 			return presenter.Unauthorized(c, errors.New("invalid email or password"))
+		} else if errors.Is(err, service.ErrAccountLocked) {
+			return presenter.Forbidden(c, errors.New("account is locked. Please try again later"))
+		} else {
+			c.Context().Logger().Printf("[Login] Internal error: %v", err)
+			return presenter.InternalServerError(c, err)
 		}
-		c.Context().Logger().Printf("[Login] Internal error: %v", err)
-		return presenter.InternalServerError(c, err)
 	}
 
 	// Check if user is active

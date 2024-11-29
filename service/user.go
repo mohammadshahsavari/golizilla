@@ -58,7 +58,7 @@ var ErrAccountLocked = errors.New("account is locked due to multiple failed logi
 func (s *UserService) AuthenticateUser(email string, password string) (*model.User, error) {
 	user, err := s.UserRepo.FindByEmail(email)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrInvalidCredentials
 		}
 		return nil, err
@@ -75,7 +75,7 @@ func (s *UserService) AuthenticateUser(email string, password string) (*model.Us
 		user.FailedLoginAttempts++
 		if user.FailedLoginAttempts >= 5 {
 			user.AccountLocked = true
-			user.AccountLockedUntil = time.Now().Add(2 * time.Minute)
+			user.AccountLockedUntil = time.Now().Add(3 * time.Minute)
 		}
 		s.UserRepo.Update(user)
 		return nil, ErrInvalidCredentials

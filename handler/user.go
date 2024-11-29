@@ -48,7 +48,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	// Generate email verification code and expiry
 	verificationCode := utils.GenerateRandomCode(6) // We'll create this utility function
 	user.EmailVerificationCode = verificationCode
-	user.EmailVerificationExpiry = time.Now().Add(15 * time.Minute)
+	user.EmailVerificationExpiry = time.Now().Add(h.Config.VerificationExpiresIn)
 	user.IsActive = false // Ensure the user is inactive until email is verified
 
 	// Attempt to save the user
@@ -65,6 +65,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	emailData := map[string]interface{}{
 		"Username":         user.Username,
 		"VerificationCode": verificationCode,
+		"Expire":           h.Config.VerificationExpiresIn.Minutes(),
 	}
 
 	err := h.EmailService.SendEmail(ctx,
@@ -134,7 +135,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		// Generate 2FA code
 		twoFACode := utils.GenerateRandomCode(6)
 		user.TwoFACode = twoFACode
-		user.TwoFACodeExpiry = time.Now().Add(10 * time.Minute)
+		user.TwoFACodeExpiry = time.Now().Add(h.Config.TwoFAExpiresIn)
 
 		// Update user in the database
 		if err := h.UserService.UpdateUser(ctx, user); err != nil {
@@ -146,6 +147,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		emailData := map[string]interface{}{
 			"Username":  user.Username,
 			"TwoFACode": twoFACode,
+			"Expire":    h.Config.TwoFAExpiresIn.Minutes(),
 		}
 
 		err = h.EmailService.SendEmail(ctx,

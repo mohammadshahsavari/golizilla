@@ -28,6 +28,9 @@ type Config struct {
 
 	JWTSecretKey string
 	JWTExpiresIn time.Duration
+
+	TwoFAExpiresIn        time.Duration
+	VerificationExpiresIn time.Duration
 }
 
 // LoadConfig loads environment variables from the .env file and returns a Config struct
@@ -56,6 +59,9 @@ func LoadConfig() (*Config, error) {
 
 		JWTSecretKey: getEnv("JWT_SECRET_KEY", "your-default-secret-key"),
 		JWTExpiresIn: time.Duration(getEnvAsInt("JWT_EXPIRES_IN", 86400)) * time.Second,
+
+		TwoFAExpiresIn:        time.Duration(getEnvAsInt("2FA_EXPIRES_IN", 600)) * time.Second,
+		VerificationExpiresIn: time.Duration(getEnvAsInt("VERIFICATION_EXPIRES_IN", 900)) * time.Second,
 	}
 
 	return cfg, nil

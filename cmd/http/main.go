@@ -43,7 +43,7 @@ func main() {
 	userService := service.NewUserService(userRepo, emailService)
 
 	// Initialize handlers
-	userHandler := handler.NewUserHandler(userService, cfg)
+	userHandler := handler.NewUserHandler(userService, emailService, cfg)
 
 	// Start API
 	route.RunServer(cfg, userHandler)

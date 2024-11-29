@@ -22,10 +22,11 @@ type UserHandler struct {
 	Config       *config.Config
 }
 
-func NewUserHandler(userService service.IUserService, cfg *config.Config) *UserHandler {
+func NewUserHandler(userService service.IUserService, emailService service.IEmailService, cfg *config.Config) *UserHandler {
 	return &UserHandler{
-		UserService: userService,
-		Config:      cfg,
+		UserService:  userService,
+		EmailService: emailService,
+		Config:       cfg,
 	}
 }
 

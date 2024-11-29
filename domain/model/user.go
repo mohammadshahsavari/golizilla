@@ -15,6 +15,7 @@ type User struct {
 	ID                      uuid.UUID `gorm:"type:uuid;primary_key;"`
 	Username                string    `gorm:"unique;not null"`
 	Email                   string    `gorm:"unique;not null"`
+	NationalID              string    `gorm:"unique;not null"`
 	Password                string    `gorm:"not null"`
 	IsActive                bool      `gorm:"default:false"`
 	EmailVerificationCode   string

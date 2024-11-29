@@ -25,6 +25,11 @@ RUN go build -o /app/golizilla ./cmd/http/main.go
 # Use a lightweight runtime image for the final container
 FROM alpine:latest
 
+RUN apk add --no-cache ca-certificates
+
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Tehran
+
 # Set the working directory for the application
 WORKDIR /app
 

@@ -8,7 +8,7 @@ import (
 )
 
 type IQuestionnaireService interface {
-	Create(questionary *model.Questionnaire) (uuid.UUID, error)
+	Create(questionnaire *model.Questionnaire) (uuid.UUID, error)
 	Delete(id uuid.UUID) error
 	Update(questionnaire *model.Questionnaire) error
 	GetById(id uuid.UUID) (*model.Questionnaire, error)
@@ -19,21 +19,21 @@ type questionnaireService struct {
 	repo respository.IQuestionnaireRepository
 }
 
-func NewQuestionnaireService(repo repository.IQuestionnaireRepository) IQuestionnaireService {
+func NewQuestionnaireService(repo respository.IQuestionnaireRepository) IQuestionnaireService {
 	return &questionnaireService{
 		repo: repo,
 	}
 }
 
-func (q *questionnaireService) Create(questionary *model.Questionnaire) (uuid.UUID, error) {
-	questionary.Id = uuid.New()
-	err := q.repo.Add(questionary)
+func (q *questionnaireService) Create(questionnaire *model.Questionnaire) (uuid.UUID, error) {
+	questionnaire.Id = uuid.New()
+	err := q.repo.Add(questionnaire)
 	if err != nil {
 		//log
-		questionary.Id = uuid.Nil
+		questionnaire.Id = uuid.Nil
 	}
 
-	return questionary.Id, err
+	return questionnaire.Id, err
 }
 
 func (q *questionnaireService) Delete(id uuid.UUID) error {

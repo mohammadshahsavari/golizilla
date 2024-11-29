@@ -5,13 +5,12 @@ import (
 	"golizilla/handler"
 	"golizilla/service"
 
-	repository "command-line-argumentsC:\\Users\\mohammad\\Desktop\\crawler\\Crawler-With-Golang\\repository\\adsRepo.go"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
 
 func setupQuestionnariRoutes(app *fiber.App, db *gorm.DB) {
-	questionnaryGroup := app.Group("/questionary")
+	questionnaryGroup := app.Group("/questionnari")
 
 	questionnaryRepo := respository.NewQuestionnaireRepository(db)
 

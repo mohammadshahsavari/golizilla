@@ -5,6 +5,7 @@ import (
 	"golizilla/config"
 	"golizilla/domain/model"
 	"golizilla/handler/presenter"
+	"golizilla/internal/apperrors"
 	"golizilla/service"
 	"golizilla/service/utils"
 	"time"
@@ -98,11 +99,7 @@ func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
 	// Attempt to verify the user's email
 	err := h.UserService.VerifyEmail(ctx, request.Email, request.Code)
 	if err != nil {
-		if err == service.ErrInvalidVerificationCode {
-			return presenter.BadRequest(c, errors.New("invalid or expired verification code"))
-		}
-		c.Context().Logger().Printf("[VerifySignup] Internal error: %v", err)
-		return presenter.InternalServerError(c, err)
+		return h.handleError(c, err)
 	}
 
 	// Respond with success
@@ -125,14 +122,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	// Authenticate the user
 	user, err := h.UserService.AuthenticateUser(ctx, request.Email, request.Password)
 	if err != nil {
-		if errors.Is(err, service.ErrInvalidCredentials) {
-			return presenter.Unauthorized(c, errors.New("invalid email or password"))
-		} else if errors.Is(err, service.ErrAccountLocked) {
-			return presenter.Forbidden(c, errors.New("account is locked. Please try again later"))
-		} else {
-			c.Context().Logger().Printf("[Login] Internal error: %v", err)
-			return presenter.InternalServerError(c, err)
-		}
+		return h.handleError(c, err)
 	}
 
 	// Check if user is active
@@ -166,15 +156,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 			emailData,
 		)
 		if err != nil {
-			switch err {
-			case service.ErrInvalidCredentials:
-				return presenter.Unauthorized(c, errors.New("invalid email or password"))
-			case service.ErrAccountLocked:
-				return presenter.Forbidden(c, errors.New("account is locked. Please try again later"))
-			default:
-				c.Context().Logger().Printf("[Login] Internal error: %v", err)
-				return presenter.InternalServerError(c, err)
-			}
+			return h.handleError(c, err)
 		}
 
 		// Respond indicating that 2FA code has been sent
@@ -201,16 +183,13 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 	// Find the user by email
 	user, err := h.UserService.GetUserByEmail(ctx, request.Email)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return presenter.Unauthorized(c, errors.New("invalid email or 2FA code"))
-		}
-		c.Context().Logger().Printf("[VerifyLogin] Internal error: %v", err)
-		return presenter.InternalServerError(c, err)
+		return h.handleError(c, err)
 	}
 
 	// Check if 2FA code matches and hasn't expired
 	if user.TwoFACode != request.Code || time.Now().After(user.TwoFACodeExpiry) {
-		return presenter.Unauthorized(c, errors.New("invalid or expired 2FA code"))
+		err := apperrors.ErrInvalidTwoFACode
+		return h.handleError(c, err)
 	}
 
 	// Clear the 2FA code fields
@@ -234,11 +213,7 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	// Fetch user details
 	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return presenter.NotFound(c, errors.New("user not found"))
-		}
-		c.Context().Logger().Printf("[GetProfile] Internal error: %v", err)
-		return presenter.InternalServerError(c, err)
+		return h.handleError(c, err)
 	}
 
 	// Respond with user data
@@ -273,7 +248,7 @@ func (h *UserHandler) generateAndSetToken(c *fiber.Ctx, user *model.User) error 
 	tokenString, err := utils.GenerateJWT(user.ID, h.Config.JWTSecretKey, h.Config.JWTExpiresIn)
 	if err != nil {
 		c.Context().Logger().Printf("[generateAndSetToken] Failed to generate JWT: %v", err)
-		return presenter.InternalServerError(c, errors.New("failed to generate token"))
+		return h.handleError(c, apperrors.ErrFailedToGenerateToken)
 	}
 
 	// Set JWT token in cookie
@@ -297,8 +272,7 @@ func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
 	// Fetch user details
 	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
-		c.Context().Logger().Printf("[Enable2FA] Internal error: %v", err)
-		return presenter.InternalServerError(c, err)
+		return h.handleError(c, err)
 	}
 
 	// Enable 2FA
@@ -348,4 +322,28 @@ func (h *UserHandler) Logout(c *fiber.Ctx) error {
 	})
 
 	return presenter.OK(c, "Logged out successfully", nil)
+}
+
+func (h *UserHandler) handleError(c *fiber.Ctx, err error) error {
+	switch {
+	case errors.Is(err, apperrors.ErrInvalidCredentials):
+		return presenter.SendError(c, fiber.StatusUnauthorized, err.Error())
+	case errors.Is(err, apperrors.ErrAccountLocked):
+		return presenter.SendError(c, fiber.StatusForbidden, err.Error())
+	case errors.Is(err, apperrors.ErrEmailAlreadyExists):
+		return presenter.SendError(c, fiber.StatusConflict, err.Error())
+	case errors.Is(err, apperrors.ErrFailedToSendEmail):
+		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
+	case errors.Is(err, apperrors.ErrInvalidVerificationCode):
+		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
+	case errors.Is(err, apperrors.ErrInvalidTwoFACode):
+		return presenter.SendError(c, fiber.StatusUnauthorized, err.Error())
+	case errors.Is(err, apperrors.ErrUserNotFound):
+		return presenter.SendError(c, fiber.StatusNotFound, err.Error())
+	case errors.Is(err, apperrors.ErrFailedToGenerateToken):
+		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
+	default:
+		c.Context().Logger().Printf("Internal error: %v", err)
+		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
+	}
 }

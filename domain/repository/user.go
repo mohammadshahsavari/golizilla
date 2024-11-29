@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"golizilla/domain/model"
 
@@ -32,6 +33,9 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.
 	var user model.User
 	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
 		return nil, fmt.Errorf("failed to find user by email: %w", err)
 	}
 	return &user, nil

@@ -16,6 +16,11 @@ type Response struct {
 	Error   string      `json:"error,omitempty"`
 }
 
+type ErrorResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error"`
+}
+
 // NewResponse creates a base response with success set to true.
 func NewResponse() *Response {
 	return &Response{
@@ -42,6 +47,13 @@ func (r *Response) SetError(err error) *Response {
 		r.Error = err.Error()
 	}
 	return r
+}
+
+func SendError(c *fiber.Ctx, statusCode int, errorMessage string) error {
+	return c.Status(statusCode).JSON(ErrorResponse{
+		Success: false,
+		Error:   errorMessage,
+	})
 }
 
 // Send sends a custom response with a specified HTTP status code.

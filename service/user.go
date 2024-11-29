@@ -3,11 +3,14 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"golizilla/domain/model"
 	"golizilla/domain/repository"
+	"golizilla/internal/apperrors"
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -32,8 +35,6 @@ func (s *UserService) CreateUser(ctx context.Context, user *model.User) error {
 	return s.UserRepo.Create(ctx, user)
 }
 
-var ErrInvalidVerificationCode = errors.New("invalid or expired verification code")
-
 func (s *UserService) VerifyEmail(ctx context.Context, email string, code string) error {
 	user, err := s.UserRepo.FindByEmail(ctx, email)
 	if err != nil {
@@ -42,7 +43,7 @@ func (s *UserService) VerifyEmail(ctx context.Context, email string, code string
 
 	// Check if the code matches and hasn't expired
 	if user.EmailVerificationCode != code || time.Now().After(user.EmailVerificationExpiry) {
-		return ErrInvalidVerificationCode
+		return apperrors.ErrInvalidVerificationCode
 	}
 
 	// Update user status
@@ -53,33 +54,30 @@ func (s *UserService) VerifyEmail(ctx context.Context, email string, code string
 	return s.UserRepo.Update(ctx, user)
 }
 
-var ErrInvalidCredentials = errors.New("invalid credentials")
-var ErrAccountLocked = errors.New("account is locked due to multiple failed login attempts")
-
 func (s *UserService) AuthenticateUser(ctx context.Context, email string, password string) (*model.User, error) {
 	user, err := s.UserRepo.FindByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrInvalidCredentials
+			return nil, apperrors.ErrInvalidCredentials
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to find user by email: %w", err)
 	}
 
 	// Check if account is locked
 	if user.AccountLocked && time.Now().Before(user.AccountLockedUntil) {
-		return nil, ErrAccountLocked
+		return nil, apperrors.ErrAccountLocked
 	}
 
 	// Check password
-	if !user.CheckPassword(password) {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		// Increment failed login attempts
 		user.FailedLoginAttempts++
 		if user.FailedLoginAttempts >= 5 {
 			user.AccountLocked = true
-			user.AccountLockedUntil = time.Now().Add(3 * time.Minute)
+			user.AccountLockedUntil = time.Now().Add(15 * time.Minute)
 		}
 		s.UserRepo.Update(ctx, user)
-		return nil, ErrInvalidCredentials
+		return nil, apperrors.ErrInvalidCredentials
 	}
 
 	// Reset failed login attempts on successful login
@@ -96,7 +94,14 @@ func (s *UserService) GetUserByID(ctx context.Context, id uuid.UUID) (*model.Use
 }
 
 func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
-	return s.UserRepo.FindByEmail(ctx, email)
+	user, err := s.UserRepo.FindByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.ErrUserNotFound
+		}
+		return nil, fmt.Errorf("failed to get user by email: %w", err)
+	}
+	return user, nil
 }
 
 func (s *UserService) UpdateUser(ctx context.Context, user *model.User) error {

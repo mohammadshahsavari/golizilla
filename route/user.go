@@ -2,15 +2,28 @@ package route
 
 import (
 	"golizilla/config"
+	"golizilla/domain/repository"
 	"golizilla/handler"
 	"golizilla/handler/middleware"
+	"golizilla/service"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
-func SetupUserRoutes(app *fiber.App, userHandler *handler.UserHandler, cfg *config.Config) {
+func SetupUserRoutes(app *fiber.App, database *gorm.DB, cfg *config.Config) {
 	// Create a group for user routes
 	userGroup := app.Group("/users")
+
+	// Initialize repositories
+	userRepo := repository.NewUserRepository(database)
+
+	// Initialize services
+	emailService := service.NewEmailService(cfg)
+	userService := service.NewUserService(userRepo, emailService)
+
+	// Initialize handlers
+	userHandler := handler.NewUserHandler(userService, emailService, cfg)
 
 	// Public routes
 	userGroup.Post("/register", userHandler.CreateUser)

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"fmt"
 	"golizilla/config"
 	"golizilla/domain/model"
 	"golizilla/handler/presenter"
@@ -62,10 +61,16 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	// Send verification email
+	emailData := map[string]interface{}{
+		"Username":         user.Username,
+		"VerificationCode": verificationCode,
+	}
+
 	err := h.EmailService.SendEmail(
-		user.Email,
+		[]string{user.Email},
 		"Email Verification",
-		fmt.Sprintf("Your verification code is: %s", verificationCode),
+		"verification.html",
+		emailData,
 	)
 	if err != nil {
 		c.Context().Logger().Printf("[CreateUser] Failed to send verification email: %v", err)
@@ -143,10 +148,16 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		}
 
 		// Send 2FA code via email
-		err := h.EmailService.SendEmail(
-			user.Email,
+		emailData := map[string]interface{}{
+			"Username":  user.Username,
+			"TwoFACode": twoFACode,
+		}
+
+		err = h.EmailService.SendEmail(
+			[]string{user.Email},
 			"Your 2FA Code",
-			fmt.Sprintf("Your 2FA code is: %s", twoFACode),
+			"2fa.html",
+			emailData,
 		)
 		if err != nil {
 			switch err {

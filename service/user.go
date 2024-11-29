@@ -75,7 +75,7 @@ func (s *UserService) AuthenticateUser(email string, password string) (*model.Us
 		user.FailedLoginAttempts++
 		if user.FailedLoginAttempts >= 5 {
 			user.AccountLocked = true
-			user.AccountLockedUntil = time.Now().Add(15 * time.Minute)
+			user.AccountLockedUntil = time.Now().Add(2 * time.Minute)
 		}
 		s.UserRepo.Update(user)
 		return nil, ErrInvalidCredentials

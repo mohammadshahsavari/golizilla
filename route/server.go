@@ -6,16 +6,16 @@ import (
 	"time"
 
 	"golizilla/config"
-	"golizilla/handler"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"gorm.io/gorm"
 )
 
-func RunServer(cfg *config.Config, userHandler *handler.UserHandler) {
+func RunServer(cfg *config.Config, database *gorm.DB) {
 	// Initialize Fiber app with middleware
 	app := fiber.New()
 
@@ -41,7 +41,7 @@ func RunServer(cfg *config.Config, userHandler *handler.UserHandler) {
 	}))
 
 	// Setup routes
-	SetupUserRoutes(app, userHandler, cfg)
+	SetupUserRoutes(app, database, cfg)
 
 	// Start the server
 	host := cfg.Host

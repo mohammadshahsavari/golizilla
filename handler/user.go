@@ -13,7 +13,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
-	"gorm.io/gorm"
 )
 
 type UserHandler struct {
@@ -35,12 +34,12 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	// Parse request body into CreateUserRequest
 	var request presenter.CreateUserRequest
 	if err := c.BodyParser(&request); err != nil {
-		return presenter.BadRequest(c, err)
+		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
 
 	// Validate the request
 	if err := request.Validate(); err != nil {
-		return presenter.BadRequest(c, err)
+		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	// Transform the request into a domain model
@@ -55,11 +54,11 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	// Attempt to save the user
 	if err := h.UserService.CreateUser(ctx, user); err != nil {
 		// Handle errors as before
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == presenter.PostgresUniqueViolationCode {
-			return presenter.DuplicateEntry(c, err)
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+			return presenter.SendError(c, fiber.StatusConflict, apperrors.ErrEmailAlreadyExists.Error())
 		}
 		c.Context().Logger().Printf("[CreateUser] Internal error: %v", err)
-		return presenter.InternalServerError(c, err)
+		return h.handleError(c, err)
 	}
 
 	// Send verification email
@@ -76,11 +75,11 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	)
 	if err != nil {
 		c.Context().Logger().Printf("[CreateUser] Failed to send verification email: %v", err)
-		return presenter.InternalServerError(c, errors.New("failed to send verification email"))
+		return h.handleError(c, apperrors.ErrFailedToSendEmail)
 	}
 
 	// Respond with a message indicating that verification is required
-	return presenter.Created(c, "User created successfully. Please verify your email.", nil)
+	return presenter.Send(c, fiber.StatusCreated, true, "User created successfully. Please verify your email.", nil, nil)
 }
 
 func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
@@ -88,12 +87,12 @@ func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
 	// Parse request body
 	var request presenter.VerifyEmailRequest
 	if err := c.BodyParser(&request); err != nil {
-		return presenter.BadRequest(c, err)
+		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
 
 	// Validate the request
 	if err := request.Validate(); err != nil {
-		return presenter.BadRequest(c, err)
+		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	// Attempt to verify the user's email
@@ -103,7 +102,7 @@ func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
 	}
 
 	// Respond with success
-	return presenter.OK(c, "Email verified successfully", nil)
+	return presenter.Send(c, fiber.StatusOK, true, "Email verified successfully", nil, nil)
 }
 
 func (h *UserHandler) Login(c *fiber.Ctx) error {
@@ -111,12 +110,12 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	// Parse request body into LoginRequest
 	var request presenter.LoginRequest
 	if err := c.BodyParser(&request); err != nil {
-		return presenter.BadRequest(c, err)
+		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
 
 	// Validate the request
 	if err := request.Validate(); err != nil {
-		return presenter.BadRequest(c, err)
+		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	// Authenticate the user
@@ -127,7 +126,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 
 	// Check if user is active
 	if !user.IsActive {
-		return presenter.Forbidden(c, errors.New("email not verified"))
+		return presenter.SendError(c, fiber.StatusForbidden, apperrors.ErrAccountLocked.Error())
 	}
 
 	// Check if 2FA is enabled
@@ -140,7 +139,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		// Update user in the database
 		if err := h.UserService.UpdateUser(ctx, user); err != nil {
 			c.Context().Logger().Printf("[Login] Failed to update user for 2FA: %v", err)
-			return presenter.InternalServerError(c, err)
+			return h.handleError(c, err)
 		}
 
 		// Send 2FA code via email
@@ -160,7 +159,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		}
 
 		// Respond indicating that 2FA code has been sent
-		return presenter.OK(c, "2FA code sent to your email", nil)
+		return presenter.Send(c, fiber.StatusOK, true, "2FA code sent to your email", nil, nil)
 	}
 
 	// If 2FA is not enabled, proceed to generate JWT token
@@ -172,12 +171,12 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 	// Parse request body into Verify2FARequest
 	var request presenter.Verify2FARequest
 	if err := c.BodyParser(&request); err != nil {
-		return presenter.BadRequest(c, err)
+		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
 
 	// Validate the request
 	if err := request.Validate(); err != nil {
-		return presenter.BadRequest(c, err)
+		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	// Find the user by email
@@ -199,7 +198,7 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 	// Update user in the database
 	if err := h.UserService.UpdateUser(ctx, user); err != nil {
 		c.Context().Logger().Printf("[VerifyLogin] Failed to update user: %v", err)
-		return presenter.InternalServerError(c, err)
+		return h.handleError(c, err)
 	}
 
 	// Generate JWT token and set cookie
@@ -208,7 +207,10 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 
 func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	ctx := c.Context()
-	userID := c.Locals("user_id").(uuid.UUID)
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
+	}
 
 	// Fetch user details
 	user, err := h.UserService.GetUserByID(ctx, userID)
@@ -217,30 +219,24 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	}
 
 	// Respond with user data
-	return presenter.OK(c, "User profile fetched successfully", presenter.NewUserResponse(user))
+	return presenter.Send(c, fiber.StatusOK, true, "User profile fetched successfully", presenter.NewUserResponse(user), nil)
 }
 
 func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
 	ctx := c.Context()
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return presenter.BadRequest(c, errors.New("invalid user ID format"))
+		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidUserID.Error())
 	}
 
 	// Attempt to fetch the user
 	user, err := h.UserService.GetUserByID(ctx, id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return presenter.NotFound(c, err)
-		}
-
-		// Log and respond with an internal server error
-		c.Context().Logger().Printf("[GetUserByID] Internal error: %v", err)
-		return presenter.InternalServerError(c, err)
+		return h.handleError(c, err)
 	}
 
 	// Respond with the fetched user
-	return presenter.OK(c, "User fetched successfully", presenter.NewUserResponse(user))
+	return presenter.Send(c, fiber.StatusOK, true, "User fetched successfully", presenter.NewUserResponse(user), nil)
 }
 
 func (h *UserHandler) generateAndSetToken(c *fiber.Ctx, user *model.User) error {
@@ -262,7 +258,7 @@ func (h *UserHandler) generateAndSetToken(c *fiber.Ctx, user *model.User) error 
 	})
 
 	// Respond with success
-	return presenter.OK(c, "Login successful", nil)
+	return presenter.Send(c, fiber.StatusOK, true, "Login successful", nil, nil)
 }
 
 func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
@@ -281,10 +277,10 @@ func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
 	// Update user in the database
 	if err := h.UserService.UpdateUser(ctx, user); err != nil {
 		c.Context().Logger().Printf("[Enable2FA] Failed to update user: %v", err)
-		return presenter.InternalServerError(c, err)
+		return h.handleError(c, err)
 	}
 
-	return presenter.OK(c, "Two-factor authentication enabled", nil)
+	return presenter.Send(c, fiber.StatusOK, true, "Two-factor authentication enabled", nil, nil)
 }
 
 func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
@@ -295,7 +291,7 @@ func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
 	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
 		c.Context().Logger().Printf("[Disable2FA] Internal error: %v", err)
-		return presenter.InternalServerError(c, err)
+		return h.handleError(c, err)
 	}
 
 	// Disable 2FA
@@ -304,10 +300,10 @@ func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
 	// Update user in the database
 	if err := h.UserService.UpdateUser(ctx, user); err != nil {
 		c.Context().Logger().Printf("[Disable2FA] Failed to update user: %v", err)
-		return presenter.InternalServerError(c, err)
+		return h.handleError(c, err)
 	}
 
-	return presenter.OK(c, "Two-factor authentication disabled", nil)
+	return presenter.Send(c, fiber.StatusOK, true, "Two-factor authentication disabled", nil, nil)
 }
 
 func (h *UserHandler) Logout(c *fiber.Ctx) error {
@@ -321,7 +317,7 @@ func (h *UserHandler) Logout(c *fiber.Ctx) error {
 		SameSite: "Strict",
 	})
 
-	return presenter.OK(c, "Logged out successfully", nil)
+	return presenter.Send(c, fiber.StatusOK, true, "Logged out successfully", nil, nil)
 }
 
 func (h *UserHandler) handleError(c *fiber.Ctx, err error) error {

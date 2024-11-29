@@ -15,5 +15,10 @@ var (
 	ErrUserNotFound            = errors.New("user not found")
 	ErrFailedToGenerateToken   = errors.New("failed to generate token")
 	ErrFailedToSendEmail       = errors.New("failed to send verification email")
+	ErrMissingAuthToken        = errors.New("missing authentication token")
+	ErrInvalidAuthToken        = errors.New("invalid or expired authentication token")
+	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
+	ErrInvalidTokenClaims      = errors.New("invalid token claims")
+	ErrInvalidUserID           = errors.New("invalid user ID in token")
 	// Add more as needed
 )

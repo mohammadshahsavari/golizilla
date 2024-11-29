@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"golizilla/config"
 	"html/template"
@@ -11,7 +12,7 @@ import (
 )
 
 type IEmailService interface {
-	SendEmail(to []string, subject string, templateName string, data interface{}) error
+	SendEmail(ctx context.Context, to []string, subject, templateName string, data interface{}) error
 }
 
 type EmailService struct {
@@ -34,7 +35,7 @@ func NewEmailService(cfg *config.Config) IEmailService {
 	}
 }
 
-func (s *EmailService) SendEmail(to []string, subject string, templateName string, data interface{}) error {
+func (s *EmailService) SendEmail(ctx context.Context, to []string, subject string, templateName string, data interface{}) error {
 	// Parse the HTML template
 	tmplPath := filepath.Join(s.templateDir, templateName)
 	tmpl, err := template.ParseFiles(tmplPath)

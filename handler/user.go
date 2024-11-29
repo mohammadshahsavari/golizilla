@@ -22,11 +22,10 @@ type UserHandler struct {
 	Config       *config.Config
 }
 
-func NewUserHandler(userService service.IUserService, emailService service.IEmailService, cfg *config.Config) *UserHandler {
+func NewUserHandler(userService service.IUserService, cfg *config.Config) *UserHandler {
 	return &UserHandler{
-		UserService:  userService,
-		EmailService: emailService,
-		Config:       cfg,
+		UserService: userService,
+		Config:      cfg,
 	}
 }
 
@@ -68,7 +67,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		"VerificationCode": verificationCode,
 	}
 
-	err := h.EmailService.SendEmail(
+	err := h.EmailService.SendEmail(ctx,
 		[]string{user.Email},
 		"Email Verification",
 		"verification.html",
@@ -149,7 +148,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 			"TwoFACode": twoFACode,
 		}
 
-		err = h.EmailService.SendEmail(
+		err = h.EmailService.SendEmail(ctx,
 			[]string{user.Email},
 			"Your 2FA Code",
 			"2fa.html",

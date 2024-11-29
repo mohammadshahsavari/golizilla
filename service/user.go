@@ -18,17 +18,21 @@ type IUserService interface {
 	CreateUser(ctx context.Context, user *model.User) error
 	GetUserByID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
-	AuthenticateUser(ctx context.Context, email string, password string) (*model.User, error)
-	VerifyEmail(ctx context.Context, email string, code string) error
+	AuthenticateUser(ctx context.Context, email, password string) (*model.User, error)
+	VerifyEmail(ctx context.Context, email, code string) error
 	UpdateUser(ctx context.Context, user *model.User) error
 }
 
 type UserService struct {
-	UserRepo repository.IUserRepository
+	UserRepo     repository.IUserRepository
+	EmailService IEmailService
 }
 
-func NewUserService(userRepo repository.IUserRepository) IUserService {
-	return &UserService{UserRepo: userRepo}
+func NewUserService(userRepo repository.IUserRepository, emailService IEmailService) IUserService {
+	return &UserService{
+		UserRepo:     userRepo,
+		EmailService: emailService,
+	}
 }
 
 func (s *UserService) CreateUser(ctx context.Context, user *model.User) error {

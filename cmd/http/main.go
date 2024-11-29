@@ -4,8 +4,11 @@ import (
 	"log"
 
 	"golizilla/config"
+	"golizilla/domain/repository"
+	"golizilla/handler"
 	"golizilla/persistence/database"
 	"golizilla/route"
+	"golizilla/service"
 
 	"gorm.io/gorm"
 )
@@ -32,7 +35,17 @@ func main() {
 		return
 	}
 
+	// Initialize repositories
+	userRepo := repository.NewUserRepository(gormDB)
+
+	// Initialize services
+	emailService := service.NewEmailService(cfg)
+	userService := service.NewUserService(userRepo, emailService)
+
+	// Initialize handlers
+	userHandler := handler.NewUserHandler(userService, cfg)
+
 	// Start API
-	route.RunServer(cfg, gormDB)
+	route.RunServer(cfg, userHandler)
 
 }

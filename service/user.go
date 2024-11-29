@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"golizilla/domain/model"
 	"golizilla/domain/repository"
@@ -11,12 +12,12 @@ import (
 )
 
 type IUserService interface {
-	CreateUser(user *model.User) error
-	VerifyEmail(email string, code string) error
-	AuthenticateUser(email string, password string) (*model.User, error)
-	GetUserByID(id uuid.UUID) (*model.User, error)
-	GetUserByEmail(email string) (*model.User, error)
-	UpdateUser(user *model.User) error
+	CreateUser(ctx context.Context, user *model.User) error
+	GetUserByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
+	AuthenticateUser(ctx context.Context, email string, password string) (*model.User, error)
+	VerifyEmail(ctx context.Context, email string, code string) error
+	UpdateUser(ctx context.Context, user *model.User) error
 }
 
 type UserService struct {
@@ -27,14 +28,14 @@ func NewUserService(userRepo repository.IUserRepository) IUserService {
 	return &UserService{UserRepo: userRepo}
 }
 
-func (s *UserService) CreateUser(user *model.User) error {
-	return s.UserRepo.Create(user)
+func (s *UserService) CreateUser(ctx context.Context, user *model.User) error {
+	return s.UserRepo.Create(ctx, user)
 }
 
 var ErrInvalidVerificationCode = errors.New("invalid or expired verification code")
 
-func (s *UserService) VerifyEmail(email string, code string) error {
-	user, err := s.UserRepo.FindByEmail(email)
+func (s *UserService) VerifyEmail(ctx context.Context, email string, code string) error {
+	user, err := s.UserRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return err
 	}
@@ -49,14 +50,14 @@ func (s *UserService) VerifyEmail(email string, code string) error {
 	user.EmailVerificationCode = ""
 	user.EmailVerificationExpiry = time.Time{}
 
-	return s.UserRepo.Update(user)
+	return s.UserRepo.Update(ctx, user)
 }
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrAccountLocked = errors.New("account is locked due to multiple failed login attempts")
 
-func (s *UserService) AuthenticateUser(email string, password string) (*model.User, error) {
-	user, err := s.UserRepo.FindByEmail(email)
+func (s *UserService) AuthenticateUser(ctx context.Context, email string, password string) (*model.User, error) {
+	user, err := s.UserRepo.FindByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrInvalidCredentials
@@ -77,7 +78,7 @@ func (s *UserService) AuthenticateUser(email string, password string) (*model.Us
 			user.AccountLocked = true
 			user.AccountLockedUntil = time.Now().Add(3 * time.Minute)
 		}
-		s.UserRepo.Update(user)
+		s.UserRepo.Update(ctx, user)
 		return nil, ErrInvalidCredentials
 	}
 
@@ -85,19 +86,19 @@ func (s *UserService) AuthenticateUser(email string, password string) (*model.Us
 	user.FailedLoginAttempts = 0
 	user.AccountLocked = false
 	user.AccountLockedUntil = time.Time{}
-	s.UserRepo.Update(user)
+	s.UserRepo.Update(ctx, user)
 
 	return user, nil
 }
 
-func (s *UserService) GetUserByID(id uuid.UUID) (*model.User, error) {
-	return s.UserRepo.FindByID(id)
+func (s *UserService) GetUserByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
+	return s.UserRepo.FindByID(ctx, id)
 }
 
-func (s *UserService) GetUserByEmail(email string) (*model.User, error) {
-	return s.UserRepo.FindByEmail(email)
+func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
+	return s.UserRepo.FindByEmail(ctx, email)
 }
 
-func (s *UserService) UpdateUser(user *model.User) error {
-	return s.UserRepo.Update(user)
+func (s *UserService) UpdateUser(ctx context.Context, user *model.User) error {
+	return s.UserRepo.Update(ctx, user)
 }

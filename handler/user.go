@@ -30,6 +30,7 @@ func NewUserHandler(userService service.IUserService, emailService service.IEmai
 }
 
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
+	ctx := c.Context()
 	// Parse request body into CreateUserRequest
 	var request presenter.CreateUserRequest
 	if err := c.BodyParser(&request); err != nil {
@@ -51,7 +52,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	user.IsActive = false // Ensure the user is inactive until email is verified
 
 	// Attempt to save the user
-	if err := h.UserService.CreateUser(user); err != nil {
+	if err := h.UserService.CreateUser(ctx, user); err != nil {
 		// Handle errors as before
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == presenter.PostgresUniqueViolationCode {
 			return presenter.DuplicateEntry(c, err)
@@ -82,6 +83,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
+	ctx := c.Context()
 	// Parse request body
 	var request presenter.VerifyEmailRequest
 	if err := c.BodyParser(&request); err != nil {
@@ -94,7 +96,7 @@ func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
 	}
 
 	// Attempt to verify the user's email
-	err := h.UserService.VerifyEmail(request.Email, request.Code)
+	err := h.UserService.VerifyEmail(ctx, request.Email, request.Code)
 	if err != nil {
 		if err == service.ErrInvalidVerificationCode {
 			return presenter.BadRequest(c, errors.New("invalid or expired verification code"))
@@ -108,6 +110,7 @@ func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) Login(c *fiber.Ctx) error {
+	ctx := c.Context()
 	// Parse request body into LoginRequest
 	var request presenter.LoginRequest
 	if err := c.BodyParser(&request); err != nil {
@@ -120,7 +123,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	}
 
 	// Authenticate the user
-	user, err := h.UserService.AuthenticateUser(request.Email, request.Password)
+	user, err := h.UserService.AuthenticateUser(ctx, request.Email, request.Password)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidCredentials) {
 			return presenter.Unauthorized(c, errors.New("invalid email or password"))
@@ -145,7 +148,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		user.TwoFACodeExpiry = time.Now().Add(10 * time.Minute)
 
 		// Update user in the database
-		if err := h.UserService.UpdateUser(user); err != nil {
+		if err := h.UserService.UpdateUser(ctx, user); err != nil {
 			c.Context().Logger().Printf("[Login] Failed to update user for 2FA: %v", err)
 			return presenter.InternalServerError(c, err)
 		}
@@ -183,6 +186,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
+	ctx := c.Context()
 	// Parse request body into Verify2FARequest
 	var request presenter.Verify2FARequest
 	if err := c.BodyParser(&request); err != nil {
@@ -195,7 +199,7 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 	}
 
 	// Find the user by email
-	user, err := h.UserService.GetUserByEmail(request.Email)
+	user, err := h.UserService.GetUserByEmail(ctx, request.Email)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presenter.Unauthorized(c, errors.New("invalid email or 2FA code"))
@@ -214,7 +218,7 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 	user.TwoFACodeExpiry = time.Time{}
 
 	// Update user in the database
-	if err := h.UserService.UpdateUser(user); err != nil {
+	if err := h.UserService.UpdateUser(ctx, user); err != nil {
 		c.Context().Logger().Printf("[VerifyLogin] Failed to update user: %v", err)
 		return presenter.InternalServerError(c, err)
 	}
@@ -224,10 +228,11 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
+	ctx := c.Context()
 	userID := c.Locals("user_id").(uuid.UUID)
 
 	// Fetch user details
-	user, err := h.UserService.GetUserByID(userID)
+	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presenter.NotFound(c, errors.New("user not found"))
@@ -241,13 +246,14 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
+	ctx := c.Context()
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return presenter.BadRequest(c, errors.New("invalid user ID format"))
 	}
 
 	// Attempt to fetch the user
-	user, err := h.UserService.GetUserByID(id)
+	user, err := h.UserService.GetUserByID(ctx, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presenter.NotFound(c, err)
@@ -285,10 +291,11 @@ func (h *UserHandler) generateAndSetToken(c *fiber.Ctx, user *model.User) error 
 }
 
 func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
+	ctx := c.Context()
 	userID := c.Locals("user_id").(uuid.UUID)
 
 	// Fetch user details
-	user, err := h.UserService.GetUserByID(userID)
+	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
 		c.Context().Logger().Printf("[Enable2FA] Internal error: %v", err)
 		return presenter.InternalServerError(c, err)
@@ -298,7 +305,7 @@ func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
 	user.IsTwoFAEnabled = true
 
 	// Update user in the database
-	if err := h.UserService.UpdateUser(user); err != nil {
+	if err := h.UserService.UpdateUser(ctx, user); err != nil {
 		c.Context().Logger().Printf("[Enable2FA] Failed to update user: %v", err)
 		return presenter.InternalServerError(c, err)
 	}
@@ -307,10 +314,11 @@ func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
+	ctx := c.Context()
 	userID := c.Locals("user_id").(uuid.UUID)
 
 	// Fetch user details
-	user, err := h.UserService.GetUserByID(userID)
+	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
 		c.Context().Logger().Printf("[Disable2FA] Internal error: %v", err)
 		return presenter.InternalServerError(c, err)
@@ -320,7 +328,7 @@ func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
 	user.IsTwoFAEnabled = false
 
 	// Update user in the database
-	if err := h.UserService.UpdateUser(user); err != nil {
+	if err := h.UserService.UpdateUser(ctx, user); err != nil {
 		c.Context().Logger().Printf("[Disable2FA] Failed to update user: %v", err)
 		return presenter.InternalServerError(c, err)
 	}

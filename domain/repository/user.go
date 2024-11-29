@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"golizilla/domain/model"
 
@@ -9,10 +10,10 @@ import (
 )
 
 type IUserRepository interface {
-	Create(user *model.User) error
-	FindByID(id uuid.UUID) (*model.User, error)
-	FindByEmail(email string) (*model.User, error)
-	Update(user *model.User) error
+	Create(ctx context.Context, user *model.User) error
+	FindByEmail(ctx context.Context, email string) (*model.User, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+	Update(ctx context.Context, user *model.User) error
 }
 
 type UserRepository struct {
@@ -23,35 +24,28 @@ func NewUserRepository(db *gorm.DB) IUserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) Create(user *model.User) error {
-	// Log the user data to ensure Password is set before saving
-	fmt.Printf("Creating user: %+v\n", user)
-
-	err := r.db.Create(user).Error
-	if err != nil {
-		fmt.Printf("Error creating user: %v\n", err)
-	}
-	return err
+func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
+	return r.db.WithContext(ctx).Create(user).Error
 }
 
-func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
+func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
-	err := r.db.Where("email = ?", email).First(&user).Error
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to find user by email: %w", err)
 	}
 	return &user, nil
 }
 
-func (r *UserRepository) Update(user *model.User) error {
-	return r.db.Save(user).Error
-}
-
-func (r *UserRepository) FindByID(id uuid.UUID) (*model.User, error) {
+func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	var user model.User
-	err := r.db.First(&user, id).Error
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to find user by ID: %w", err)
 	}
 	return &user, nil
+}
+
+func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
+	return r.db.WithContext(ctx).Save(user).Error
 }

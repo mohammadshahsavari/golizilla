@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Two-Factor Authentication Code</title>
+</head>
+<body>
+    <p>Hi {{.Username}},</p>
+    <p>
+        Your Two-Factor Authentication (2FA) code is:
+    </p>
+    <h2>{{.TwoFACode}}</h2>
+    <p>This code will expire in {{.Expire}} minutes.</p>
+    <p>If you did not attempt to log in, please secure your account.</p>
+    <p>Best regards,<br/>GoliZilla</p>
+</body>
+</html>

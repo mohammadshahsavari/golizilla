@@ -10,7 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func JWTMiddleware(cfg *config.Config) fiber.Handler {
+func AuthMiddleware(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Extract the token from cookies
 		tokenString := c.Cookies("auth_token")

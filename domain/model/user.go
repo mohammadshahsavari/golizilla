@@ -28,6 +28,13 @@ type User struct {
 	FailedLoginAttempts     int  `gorm:"default:0"`
 	AccountLocked           bool `gorm:"default:false"`
 	AccountLockedUntil      time.Time
+	// profile fields
+	FirstName               string
+	LastName                string
+	City                    string
+	Wallet                  uint
+	DateOfBirth             time.Time       `gorm:"type:date"`
+	NotificationList        []*Notification `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE;"`
 }
 
 // BeforeCreate is a GORM hook to generate a UUID before creating a new record.

@@ -224,6 +224,51 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	return presenter.Send(c, fiber.StatusOK, true, "User profile fetched successfully", presenter.NewUserResponse(user), nil)
 }
 
+func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
+	ctx := c.Context()
+
+	var request presenter.UpdateProfileRequest
+	if err := c.BodyParser(&request); err != nil {
+		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
+	}
+
+	if err := request.Validate(); err != nil {
+		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidUserDateOfBirth.Error())
+	}
+
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
+	}
+
+	user := request.ToDomain()
+	user.ID = userID
+
+	err := h.UserService.UpdateProfile(ctx, user)
+	if err != nil {
+		c.Context().Logger().Printf("[UpdateProfile] Internal error: %v", err)
+		return h.handleError(c, err)
+	}
+
+	return presenter.Send(c, fiber.StatusOK, true, "user profile updated successfully", presenter.NewUserResponse(user), nil)
+}
+
+func (h *UserHandler) GetNotificationListList(c *fiber.Ctx) error {
+	ctx := c.Context()
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
+	}
+
+	notifList, err := h.UserService.GetNotificationList(ctx, userID) // *
+	if err != nil {
+		c.Context().Logger().Printf("[GetNotifications] Internal error: %v", err)
+		return h.handleError(c, err)
+	}
+	
+	return presenter.Send(c, fiber.StatusOK, true, "user notifications successfully fetched", notifList, nil)
+}
+
 func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
 	ctx := c.Context()
 	id, err := uuid.Parse(c.Params("id"))

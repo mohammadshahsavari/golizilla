@@ -23,7 +23,7 @@ func setupDB(cfg *config.Config) (*gorm.DB, error) {
 	}
 
 	// Run migrations for the Ads, Filters, and Users models
-	err = db.AutoMigrate(&models.User{}, &models.Notification{})
+	err = db.AutoMigrate(&models.User{}, &models.Questionnaire{}, &models.Notification{})
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}

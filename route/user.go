@@ -32,7 +32,7 @@ func SetupUserRoutes(app *fiber.App, database *gorm.DB, cfg *config.Config) {
 	userGroup.Post("/verify-login", userHandler.VerifyLogin)
 
 	// Initialize the JWT middleware with the config
-	jwtMiddleware := middleware.JWTMiddleware(cfg)
+	jwtMiddleware := middleware.AuthMiddleware(cfg)
 
 	// Protected routes
 	userGroup.Get("/profile", jwtMiddleware, userHandler.GetProfile)

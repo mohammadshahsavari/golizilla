@@ -3,6 +3,7 @@ package presenter
 import (
 	"errors"
 	"golizilla/domain/model"
+	"golizilla/service/utils"
 	"regexp"
 
 	"github.com/google/uuid"
@@ -29,6 +30,13 @@ type LoginRequest struct {
 type Verify2FARequest struct {
 	Email string `json:"email"`
 	Code  string `json:"code"`
+}
+
+type UpdateProfileRequest struct {
+	FirstName   string `json:"firstName"`
+	LastName    string `json:"lastName"`
+	City        string `json:"city"`
+	DateOfBirth string `json:"dateOfBirth"`
 }
 
 // Validate validates the CreateUserRequest fields.
@@ -87,6 +95,13 @@ func (r *Verify2FARequest) Validate() error {
 	return nil
 }
 
+func (r *UpdateProfileRequest) Validate() error {
+	if _, err := utils.ParseDate(r.DateOfBirth); err != nil {
+		return errors.New("invalid date format")
+	}
+	return nil
+}
+
 // ToDomain transforms the CreateUserRequest into a User domain model.
 func (r *CreateUserRequest) ToDomain() *model.User {
 	return &model.User{
@@ -97,19 +112,39 @@ func (r *CreateUserRequest) ToDomain() *model.User {
 	}
 }
 
+func (r *UpdateProfileRequest) ToDomain() *model.User {
+	dob, _ := utils.ParseDate(r.DateOfBirth)
+	return &model.User{
+		FirstName:               r.FirstName,
+		LastName:                r.LastName,
+		City:                    r.City,
+		DateOfBirth:             dob,
+	}
+}
+
 // UserResponse defines the structure of the User object returned to the client.
 type UserResponse struct {
-	ID       uuid.UUID `json:"id"`
-	Username string    `json:"username"`
-	Email    string    `json:"email"`
+	ID          uuid.UUID `json:"id"`
+	Username    string    `json:"username"`
+	Email       string    `json:"email"`
+	FirstName   string    `json:"firstName"`
+	LastName    string    `json:"lastName"`
+	City        string    `json:"city"`
+	Wallet      uint      `json:"wallet"`
+	DateOfBirth string    `json:"dateOfBirth"`
 }
 
 // NewUserResponse transforms a single User domain model into a UserResponse.
 func NewUserResponse(user *model.User) *UserResponse {
 	return &UserResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		Email:    user.Email,
+		ID:          user.ID,
+		Username:    user.Username,
+		Email:       user.Email,
+		FirstName:   user.FirstName,
+		LastName:    user.LastName,
+		City:        user.City,
+		Wallet:      user.Wallet,
+		DateOfBirth: user.DateOfBirth.UTC().Format("2006-01-02"),
 	}
 }
 

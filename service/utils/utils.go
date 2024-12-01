@@ -42,3 +42,15 @@ func GenerateJWT(userID uuid.UUID, secretKey string, expiresIn time.Duration) (s
 func ParseUUID(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
 }
+
+// Input string in the format "yyyy-mm-dd"
+func ParseDate(date string) (time.Time, error) {
+	layout := "2006-01-02"
+	
+	parsedDate, err := time.Parse(layout, date)
+	if err != nil {
+		return time.Time{}, err
+	}
+	
+	return parsedDate, nil
+}

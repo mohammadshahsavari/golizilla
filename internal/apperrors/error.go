@@ -20,5 +20,6 @@ var (
 	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
 	ErrInvalidTokenClaims      = errors.New("invalid token claims")
 	ErrInvalidUserID           = errors.New("invalid user ID in token")
+	ErrInvalidUserDateOfBirth  = errors.New("invalid user date of birth")
 	// Add more as needed
 )

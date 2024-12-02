@@ -15,6 +15,7 @@ type CreateQuestionnariRequest struct {
 	BackCompatible bool          `json:"backCompatible"`
 	Title          string        `json:"title"`
 	AnswerTime     time.Duration `json:"answerTime"`
+	Anonymous      bool          `json:"anonymous"`
 	//TODO: Questions
 }
 
@@ -33,6 +34,7 @@ type GetQuestionnariResponseData struct {
 	Title              string        `json:"title"`
 	AnswerTime         time.Duration `json:"answerTime"`
 	ParticipationCount uint          `json:"particpationCount"`
+	Anonymous          bool          `json:"anonymous"`
 }
 
 func (req *CreateQuestionnariRequest) Validate() error {
@@ -54,6 +56,7 @@ func (req *CreateQuestionnariRequest) ToDomain() *model.Questionnaire {
 		BackCompatible: req.BackCompatible,
 		Title:          req.Title,
 		AnswerTime:     req.AnswerTime,
+		Anonymous:      req.Anonymous,
 	}
 }
 
@@ -80,6 +83,7 @@ func NewGetQuestionnariResponse(data *model.Questionnaire) Response {
 			Title:              data.Title,
 			AnswerTime:         data.AnswerTime,
 			ParticipationCount: data.ParticipationCount,
+			Anonymous:          data.Anonymous,
 		},
 	}
 }
@@ -99,6 +103,7 @@ func NewGetQuestionnariesResponse(data []model.Questionnaire) Response {
 			Title:              item.Title,
 			AnswerTime:         item.AnswerTime,
 			ParticipationCount: item.ParticipationCount,
+			Anonymous:          item.Anonymous,
 		})
 	}
 	return Response{

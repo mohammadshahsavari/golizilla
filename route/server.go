@@ -28,10 +28,22 @@ func RunServer(cfg *config.Config, database *gorm.DB) {
 	app.Use(limiter.New(limiter.Config{
 		Max:        100,
 		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			// Use IP address as the key
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"success": false,
+				"error":   "Too many requests. Please try again later.",
+			})
+		},
 	}))
 
 	// Setup routes
-	SetupUserRoutes(app, database)
+	SetupUserRoutes(app, database, cfg)
+
+	setupQuestionnariRoutes(app, database, cfg)
 
 	// Start the server
 	host := cfg.Host

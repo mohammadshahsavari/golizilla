@@ -12,12 +12,29 @@ import (
 
 // User represents a user in the domain layer.
 type User struct {
-	ID        uuid.UUID `gorm:"type:uuid;primary_key;"`
-	Username  string    `gorm:"unique;not null"`
-	Email     string    `gorm:"unique;not null"`
-	Password  string    `gorm:"not null"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID                      uuid.UUID `gorm:"type:uuid;primary_key;"`
+	Username                string    `gorm:"unique;not null"`
+	Email                   string    `gorm:"unique;not null"`
+	NationalID              string    `gorm:"unique;not null"`
+	Password                string    `gorm:"not null"`
+	IsActive                bool      `gorm:"default:false"`
+	EmailVerificationCode   string
+	EmailVerificationExpiry time.Time
+	IsTwoFAEnabled          bool `gorm:"default:false"`
+	TwoFACode               string
+	TwoFACodeExpiry         time.Time
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	FailedLoginAttempts     int  `gorm:"default:0"`
+	AccountLocked           bool `gorm:"default:false"`
+	AccountLockedUntil      time.Time
+	// profile fields
+	FirstName               string
+	LastName                string
+	City                    string
+	Wallet                  uint
+	DateOfBirth             time.Time       `gorm:"type:date"`
+	NotificationList        []*Notification `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE;"`
 }
 
 // BeforeCreate is a GORM hook to generate a UUID before creating a new record.

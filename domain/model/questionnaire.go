@@ -7,15 +7,15 @@ import (
 )
 
 type Questionnaire struct {
-	Id                uuid.UUID `gorm:"type:uuid;primaryKey"`
-	OwnerId           uuid.UUID `gorm:"not null"`
-	CreatedTime       time.Time `gorm:"not null"`
-	StartTime         time.Time `gorm:"not null"`
-	EndTime           time.Time `gorm:"not null"`
-	Random            bool
-	BackCompatible    bool
-	Title             string
-	AnswerTime        time.Duration `gorm:"not null"`
-	ParticpationCount uint
-	Owner             User `gorm:"foreinKey:OwnerId"`
+	Id                 uuid.UUID `gorm:"type:uuid;primaryKey"`
+	OwnerId            uuid.UUID `gorm:"not null"`
+	CreatedTime        time.Time `gorm:"not null"`
+	StartTime          time.Time `gorm:"not null"`
+	EndTime            time.Time `gorm:"not null"`
+	Random             bool
+	BackCompatible     bool
+	Title              string
+	AnswerTime         time.Duration `gorm:"not null"`
+	ParticipationCount uint
+	Owner              User `gorm:"foreinKey:OwnerId"`
 }

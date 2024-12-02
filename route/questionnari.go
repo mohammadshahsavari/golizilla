@@ -13,22 +13,22 @@ import (
 )
 
 func setupQuestionnariRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
-	questionnaryGroup := app.Group("/questionnari")
+	questionnariGroup := app.Group("/questionnari")
 
-	questionnaryRepo := respository.NewQuestionnaireRepository(db)
+	questionnariRepo := respository.NewQuestionnaireRepository(db)
 
-	questionnaryService := service.NewQuestionnaireService(questionnaryRepo)
+	questionnariService := service.NewQuestionnaireService(questionnariRepo)
 
-	questionnariHandler := handler.NewQuestionnaryHandler(questionnaryService)
+	questionnariHandler := handler.NewQuestionnariHandler(questionnariService)
 
 	authMiddleware := middleware.AuthMiddleware(cfg)
 	headerAuthMiddleware := middleware.HeaderAuthMiddleware(cfg)
 
-	questionnaryGroup.Post("/", authMiddleware, questionnariHandler.Create)
+	questionnariGroup.Post("/", authMiddleware, questionnariHandler.Create)
 
-	questionnaryGroup.Get("/:id", authMiddleware, questionnariHandler.GetById)
-	questionnaryGroup.Get("/ownerId/:id", authMiddleware, questionnariHandler.GetByOwnerId)
-	questionnaryGroup.Post("/update", authMiddleware, questionnariHandler.Update)
-	questionnaryGroup.Delete("/:id", authMiddleware, questionnariHandler.Delete)
-	questionnaryGroup.Get("/GetResults/:id", headerAuthMiddleware, websocket.New(questionnariHandler.GetResults))
+	questionnariGroup.Get("/:id", authMiddleware, questionnariHandler.GetById)
+	questionnariGroup.Get("/ownerId/:id", authMiddleware, questionnariHandler.GetByOwnerId)
+	questionnariGroup.Post("/update", authMiddleware, questionnariHandler.Update)
+	questionnariGroup.Delete("/:id", authMiddleware, questionnariHandler.Delete)
+	questionnariGroup.Get("/GetResults/:id", headerAuthMiddleware, websocket.New(questionnariHandler.GetResults))
 }

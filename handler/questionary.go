@@ -13,18 +13,18 @@ import (
 	"gorm.io/gorm"
 )
 
-type QuestionnaryHandler struct {
-	questionnaryService service.IQuestionnaireService
+type QuestionnariHandler struct {
+	questionnariService service.IQuestionnaireService
 }
 
-func NewQuestionnaryHandler(questionnaryService service.IQuestionnaireService) *QuestionnaryHandler {
-	return &QuestionnaryHandler{
-		questionnaryService: questionnaryService,
+func NewQuestionnariHandler(questionnariService service.IQuestionnaireService) *QuestionnariHandler {
+	return &QuestionnariHandler{
+		questionnariService: questionnariService,
 	}
 }
 
-func (q *QuestionnaryHandler) Create(c *fiber.Ctx) error {
-	var request presenter.CreateQuestionnaryRequest
+func (q *QuestionnariHandler) Create(c *fiber.Ctx) error {
+	var request presenter.CreateQuestionnariRequest
 	if err := c.BodyParser(&request); err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
@@ -35,20 +35,20 @@ func (q *QuestionnaryHandler) Create(c *fiber.Ctx) error {
 
 	userModel := request.ToDomain()
 	userModel.OwnerId = c.Locals("user_id").(uuid.UUID)
-	if id, err := q.questionnaryService.Create(userModel); err != nil {
+	if id, err := q.questionnariService.Create(userModel); err != nil {
 		//log
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	} else {
-		return presenter.Send(c, fiber.StatusOK, true, "Questionnary created successfully", presenter.NewCreateQuestionnaryResponse(id), nil)
+		return presenter.Send(c, fiber.StatusOK, true, "Questionnari created successfully", presenter.NewCreateQuestionnariResponse(id), nil)
 	}
 }
 
-func (q *QuestionnaryHandler) Delete(c *fiber.Ctx) error {
+func (q *QuestionnariHandler) Delete(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	err = q.questionnaryService.Delete(id)
+	err = q.questionnariService.Delete(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presenter.SendError(c, fiber.StatusNotFound, err.Error())
@@ -61,8 +61,8 @@ func (q *QuestionnaryHandler) Delete(c *fiber.Ctx) error {
 	return presenter.Send(c, fiber.StatusOK, true, "Deleted", nil, nil)
 }
 
-func (q *QuestionnaryHandler) Update(c *fiber.Ctx) error {
-	var request presenter.CreateQuestionnaryRequest
+func (q *QuestionnariHandler) Update(c *fiber.Ctx) error {
+	var request presenter.CreateQuestionnariRequest
 	if err := c.BodyParser(&request); err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
@@ -73,7 +73,7 @@ func (q *QuestionnaryHandler) Update(c *fiber.Ctx) error {
 
 	userModel := request.ToDomain()
 
-	if err := q.questionnaryService.Update(userModel); err != nil {
+	if err := q.questionnariService.Update(userModel); err != nil {
 		//log
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
@@ -81,12 +81,12 @@ func (q *QuestionnaryHandler) Update(c *fiber.Ctx) error {
 	return presenter.Send(c, fiber.StatusOK, true, "Updated", nil, nil)
 }
 
-func (q *QuestionnaryHandler) GetById(c *fiber.Ctx) error {
+func (q *QuestionnariHandler) GetById(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	questionary, err := q.questionnaryService.GetById(id)
+	questionnari, err := q.questionnariService.GetById(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presenter.SendError(c, fiber.StatusNotFound, err.Error())
@@ -96,15 +96,15 @@ func (q *QuestionnaryHandler) GetById(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
-	return presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnaryResponse(questionary), nil)
+	return presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnariResponse(questionnari), nil)
 }
 
-func (q *QuestionnaryHandler) GetByOwnerId(c *fiber.Ctx) error {
+func (q *QuestionnariHandler) GetByOwnerId(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	questionaries, err := q.questionnaryService.GetByOwnerId(id)
+	questionnaries, err := q.questionnariService.GetByOwnerId(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presenter.SendError(c, fiber.StatusNotFound, err.Error())
@@ -114,17 +114,17 @@ func (q *QuestionnaryHandler) GetByOwnerId(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
-	return presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnariesResponse(questionaries), nil)
+	return presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnariesResponse(questionnaries), nil)
 }
 
-func (q *QuestionnaryHandler) GetResults(c *websocket.Conn) {
+func (q *QuestionnariHandler) GetResults(c *websocket.Conn) {
 	idString := c.Params("id")
 	id, err := uuid.Parse(idString)
 	if err != nil {
 		c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
 		return
 	}
-	_, err = q.questionnaryService.GetById(id)
+	_, err = q.questionnariService.GetById(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
@@ -136,14 +136,14 @@ func (q *QuestionnaryHandler) GetResults(c *websocket.Conn) {
 
 	var lastValue uint = 0
 	for {
-		questionary, err := q.questionnaryService.GetById(id)
+		questionnari, err := q.questionnariService.GetById(id)
 		if err != nil {
 			//log
 			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
 			break
 		}
-		if lastValue != questionary.ParticpationCount {
-			lastValue = questionary.ParticpationCount
+		if lastValue != questionnari.ParticipationCount {
+			lastValue = questionnari.ParticipationCount
 			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%d", lastValue)))
 		}
 		time.Sleep(time.Second * 10)

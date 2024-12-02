@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type CreateQuestionnaryRequest struct {
+type CreateQuestionnariRequest struct {
 	StartTime      time.Time     `json:"startTime"`
 	EndTime        time.Time     `json:"endTime"`
 	Random         bool          `json:"random"`
@@ -18,24 +18,24 @@ type CreateQuestionnaryRequest struct {
 	//TODO: Questions
 }
 
-type CreateQuestionnaryResponseData struct {
+type CreateQuestionnariResponseData struct {
 	Id uuid.UUID `json:"id"`
 }
 
-type GetQuestionnaryResponseData struct {
-	Id                uuid.UUID     `json:"id"`
-	OwnerId           uuid.UUID     `json:"ownerId"`
-	CreatedTime       time.Time     `json:"createdTime"`
-	StartTime         time.Time     `json:"startTime"`
-	EndTime           time.Time     `json:"endTime"`
-	Random            bool          `json:"random"`
-	BackCompatible    bool          `json:"backCompatible"`
-	Title             string        `json:"title"`
-	AnswerTime        time.Duration `json:"answerTime"`
-	ParticpationCount uint          `json:"particpationCount"`
+type GetQuestionnariResponseData struct {
+	Id                 uuid.UUID     `json:"id"`
+	OwnerId            uuid.UUID     `json:"ownerId"`
+	CreatedTime        time.Time     `json:"createdTime"`
+	StartTime          time.Time     `json:"startTime"`
+	EndTime            time.Time     `json:"endTime"`
+	Random             bool          `json:"random"`
+	BackCompatible     bool          `json:"backCompatible"`
+	Title              string        `json:"title"`
+	AnswerTime         time.Duration `json:"answerTime"`
+	ParticipationCount uint          `json:"particpationCount"`
 }
 
-func (req *CreateQuestionnaryRequest) Validate() error {
+func (req *CreateQuestionnariRequest) Validate() error {
 	if req.EndTime.Before(req.StartTime) || req.EndTime.Before(time.Now()) {
 		return errors.New("start and end time is not valid")
 	}
@@ -46,7 +46,7 @@ func (req *CreateQuestionnaryRequest) Validate() error {
 	return nil
 }
 
-func (req *CreateQuestionnaryRequest) ToDomain() *model.Questionnaire {
+func (req *CreateQuestionnariRequest) ToDomain() *model.Questionnaire {
 	return &model.Questionnaire{
 		StartTime:      req.StartTime,
 		EndTime:        req.EndTime,
@@ -57,48 +57,48 @@ func (req *CreateQuestionnaryRequest) ToDomain() *model.Questionnaire {
 	}
 }
 
-func NewCreateQuestionnaryResponse(id uuid.UUID) Response {
+func NewCreateQuestionnariResponse(id uuid.UUID) Response {
 	return Response{
 		Success: true,
-		Data: CreateQuestionnaryResponseData{
+		Data: CreateQuestionnariResponseData{
 			Id: id,
 		},
 	}
 }
 
-func NewGetQuestionnaryResponse(data *model.Questionnaire) Response {
+func NewGetQuestionnariResponse(data *model.Questionnaire) Response {
 	return Response{
 		Success: true,
-		Data: GetQuestionnaryResponseData{
-			Id:                data.Id,
-			OwnerId:           data.OwnerId,
-			CreatedTime:       data.CreatedTime,
-			StartTime:         data.StartTime,
-			EndTime:           data.EndTime,
-			Random:            data.Random,
-			BackCompatible:    data.BackCompatible,
-			Title:             data.Title,
-			AnswerTime:        data.AnswerTime,
-			ParticpationCount: data.ParticpationCount,
+		Data: GetQuestionnariResponseData{
+			Id:                 data.Id,
+			OwnerId:            data.OwnerId,
+			CreatedTime:        data.CreatedTime,
+			StartTime:          data.StartTime,
+			EndTime:            data.EndTime,
+			Random:             data.Random,
+			BackCompatible:     data.BackCompatible,
+			Title:              data.Title,
+			AnswerTime:         data.AnswerTime,
+			ParticipationCount: data.ParticipationCount,
 		},
 	}
 }
 
 func NewGetQuestionnariesResponse(data []model.Questionnaire) Response {
-	var resultData []GetQuestionnaryResponseData
+	var resultData []GetQuestionnariResponseData
 
 	for _, item := range data {
-		resultData = append(resultData, GetQuestionnaryResponseData{
-			Id:                item.Id,
-			OwnerId:           item.OwnerId,
-			CreatedTime:       item.CreatedTime,
-			StartTime:         item.StartTime,
-			EndTime:           item.EndTime,
-			Random:            item.Random,
-			BackCompatible:    item.BackCompatible,
-			Title:             item.Title,
-			AnswerTime:        item.AnswerTime,
-			ParticpationCount: item.ParticpationCount,
+		resultData = append(resultData, GetQuestionnariResponseData{
+			Id:                 item.Id,
+			OwnerId:            item.OwnerId,
+			CreatedTime:        item.CreatedTime,
+			StartTime:          item.StartTime,
+			EndTime:            item.EndTime,
+			Random:             item.Random,
+			BackCompatible:     item.BackCompatible,
+			Title:              item.Title,
+			AnswerTime:         item.AnswerTime,
+			ParticipationCount: item.ParticipationCount,
 		})
 	}
 	return Response{

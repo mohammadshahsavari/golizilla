@@ -5,10 +5,15 @@ import (
 	"golizilla/handler/presenter"
 	"golizilla/internal/apperrors"
 	"golizilla/service/utils"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
+
+var Store *session.Store
 
 func AuthMiddleware(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -39,9 +44,27 @@ func AuthMiddleware(cfg *config.Config) fiber.Handler {
 		}
 
 		// Parse user ID from claims
-		userID, err := utils.ParseUUID(claims["user_id"].(string))
+		_, err = utils.ParseUUID(claims["user_id"].(string))
 		if err != nil {
 			return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
+		}
+
+		// Get the session
+		sess, err := Store.Get(c)
+		if err != nil {
+			return presenter.SendError(c, fiber.StatusUnauthorized, "Session not found")
+		}
+
+		// Retrieve the user ID from the session
+		userIDValue := sess.Get("user_id")
+		if userIDValue == nil {
+			return presenter.SendError(c, fiber.StatusUnauthorized, "Unauthorized access")
+		}
+
+		// Assert the type of userIDValue
+		userID, err := uuid.Parse(userIDValue.(string))
+		if err != nil {
+			return presenter.SendError(c, fiber.StatusUnauthorized, "Invalid session data")
 		}
 
 		// Store user ID in locals for downstream handlers
@@ -50,4 +73,13 @@ func AuthMiddleware(cfg *config.Config) fiber.Handler {
 		// Proceed to the next handler
 		return c.Next()
 	}
+}
+
+func InitSessionStore(cfg *config.Config) {
+	Store = session.New(session.Config{
+		// Set options for the session store
+		CookieHTTPOnly: true,
+		CookieSameSite: "Strict",
+		Expiration:     cfg.JWTExpiresIn * time.Second,
+	})
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"golizilla/config"
 	"golizilla/domain/model"
+	"golizilla/handler/middleware"
 	"golizilla/handler/presenter"
 	"golizilla/internal/apperrors"
 	"golizilla/service"
@@ -164,6 +165,19 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		return presenter.Send(c, fiber.StatusOK, true, "2FA code sent to your email", nil, nil)
 	}
 
+	// Get session and set user ID
+	sess, err := middleware.Store.Get(c)
+	if err != nil {
+		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to create session")
+	}
+
+	sess.Set("user_id", user.ID.String())
+
+	// Save session
+	if err := sess.Save(); err != nil {
+		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to save session")
+	}
+
 	// If 2FA is not enabled, proceed to generate JWT token
 	return h.generateAndSetToken(c, user)
 }
@@ -201,6 +215,19 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 	if err := h.UserService.UpdateUser(ctx, user); err != nil {
 		c.Context().Logger().Printf("[VerifyLogin] Failed to update user: %v", err)
 		return h.handleError(c, err)
+	}
+
+	// Get session and set user ID
+	sess, err := middleware.Store.Get(c)
+	if err != nil {
+		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to create session")
+	}
+
+	sess.Set("user_id", user.ID.String())
+
+	// Save session
+	if err := sess.Save(); err != nil {
+		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to save session")
 	}
 
 	// Generate JWT token and set cookie
@@ -265,7 +292,7 @@ func (h *UserHandler) GetNotificationListList(c *fiber.Ctx) error {
 		c.Context().Logger().Printf("[GetNotifications] Internal error: %v", err)
 		return h.handleError(c, err)
 	}
-	
+
 	return presenter.Send(c, fiber.StatusOK, true, "user notifications successfully fetched", notifList, nil)
 }
 

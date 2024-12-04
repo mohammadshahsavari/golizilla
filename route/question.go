@@ -5,18 +5,19 @@ import (
 	"golizilla/domain/repository"
 	"golizilla/handler"
 	"golizilla/handler/middleware"
+	"golizilla/persistence/database"
 	"golizilla/service"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
 
-func SetupQuestionRoutes(app *fiber.App, database *gorm.DB, cfg *config.Config) {
+func SetupQuestionRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	// Create a group for user routes
 	questionGroup := app.Group("/questions")
 
 	// Initialize repositories
-	questionRepo := repository.NewQuestionRepository(database)
+	questionRepo := repository.NewQuestionRepository(db)
 
 	// Initialize services
 	questionService := service.NewQuestionService(questionRepo)
@@ -28,8 +29,8 @@ func SetupQuestionRoutes(app *fiber.App, database *gorm.DB, cfg *config.Config) 
 	jwtMiddleware := middleware.AuthMiddleware(cfg)
 
 	// Protected routes
-	questionGroup.Post("/create", jwtMiddleware, questionHandler.Create)
-	questionGroup.Put("/update/:id", jwtMiddleware, questionHandler.Update)
-	questionGroup.Get("/:id", jwtMiddleware, questionHandler.GetByID)
-	questionGroup.Delete("/:id", jwtMiddleware, questionHandler.Delete)
+	questionGroup.Post("/create", middleware.SetTransaction(database.NewGormCommitter(db)), jwtMiddleware, questionHandler.Create)
+	questionGroup.Put("/update/:id", middleware.SetTransaction(database.NewGormCommitter(db)), jwtMiddleware, questionHandler.Update)
+	questionGroup.Get("/:id", middleware.SetTransaction(database.NewGormCommitter(db)), jwtMiddleware, questionHandler.GetByID)
+	questionGroup.Delete("/:id", middleware.SetTransaction(database.NewGormCommitter(db)), jwtMiddleware, questionHandler.Delete)
 }

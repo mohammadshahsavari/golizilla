@@ -6,6 +6,7 @@ import (
 	"golizilla/handler"
 	"golizilla/handler/middleware"
 	privilegeconstants "golizilla/internal/privilegeConstants"
+	"golizilla/persistence/database"
 	"golizilla/service"
 
 	"github.com/gofiber/contrib/websocket"
@@ -31,10 +32,10 @@ func setupQuestionnariRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	authorizationMiddleware := middleware.AuthorizationMiddleware(authorizationsService)
 	headerAuthMiddleware := middleware.HeaderAuthMiddleware(cfg)
 
-	questionnariGroup.Post("/", authMiddleware, authorizationMiddleware(privilegeconstants.CreateQuestionnari), questionnariHandler.Create)
-	questionnariGroup.Get("/:id", authMiddleware, questionnariHandler.GetById)
-	questionnariGroup.Get("/ownerId/:id", authMiddleware, questionnariHandler.GetByOwnerId)
-	questionnariGroup.Post("/update", authMiddleware, questionnariHandler.Update)
-	questionnariGroup.Delete("/:id", authMiddleware, questionnariHandler.Delete)
-	questionnariGroup.Get("/GetResults/:id", headerAuthMiddleware, websocket.New(questionnariHandler.GetResults))
+	questionnariGroup.Post("/", middleware.SetTransaction(database.NewGormCommitter(db)), authMiddleware, authorizationMiddleware(privilegeconstants.CreateQuestionnari), questionnariHandler.Create)
+	questionnariGroup.Get("/:id", middleware.SetTransaction(database.NewGormCommitter(db)), authMiddleware, questionnariHandler.GetById)
+	questionnariGroup.Get("/ownerId/:id", middleware.SetTransaction(database.NewGormCommitter(db)), authMiddleware, questionnariHandler.GetByOwnerId)
+	questionnariGroup.Post("/update", middleware.SetTransaction(database.NewGormCommitter(db)), authMiddleware, questionnariHandler.Update)
+	questionnariGroup.Delete("/:id", middleware.SetTransaction(database.NewGormCommitter(db)), authMiddleware, questionnariHandler.Delete)
+	questionnariGroup.Get("/GetResults/:id", middleware.SetTransaction(database.NewGormCommitter(db)), headerAuthMiddleware, websocket.New(questionnariHandler.GetResults))
 }

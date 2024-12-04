@@ -6,14 +6,23 @@ import (
 	"sync"
 	"time"
 
-	"golizilla/handler/middleware" // Import middleware for session handling
+	// Import middleware for session handling
 
-	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+)
+
+type ContextKey string
+
+const (
+	TraceIDKey       ContextKey = "trace_id"
+	TransactionIDKey ContextKey = "transaction_id"
+	UserIDKey        ContextKey = "user_id"
+	SessionIDKey     ContextKey = "session_id"
+	Endpoint         ContextKey = "endpoint"
 )
 
 // MongoDBCore is a custom Zap Core that writes logs to MongoDB.
@@ -43,6 +52,7 @@ func NewMongoDBCore(uri, dbName, collectionName string, level zapcore.LevelEnabl
 	})
 	encoderConfig.MessageKey = "message"
 	encoderConfig.LevelKey = "level"
+	encoderConfig.CallerKey = "caller"
 	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 
 	encoder := zapcore.NewJSONEncoder(encoderConfig)
@@ -110,112 +120,6 @@ type Logger struct {
 	zapLogger *zap.Logger
 }
 
-// LogFields defines the required fields for logging.
-type LogFields struct {
-	Service       string
-	Endpoint      string
-	UserID        string
-	SessionID     string
-	TransactionID string
-	TraceID       string
-	Message       string
-	Context       interface{}
-}
-
-// addDefaultFields adds default values for trace_id, transaction_id, and session_id.
-func (l *Logger) addDefaultFields(fields LogFields, c *fiber.Ctx) LogFields {
-	if c != nil {
-		if fields.TraceID == "" {
-			fields.TraceID, _ = c.Locals("trace_id").(string)
-		}
-		if fields.TransactionID == "" {
-			fields.TransactionID, _ = c.Locals("transaction_id").(string)
-		}
-		if fields.SessionID == "" {
-			session, _ := middleware.Store.Get(c)
-			fields.SessionID = session.ID()
-		}
-		if fields.UserID == "" {
-			session, _ := middleware.Store.Get(c)
-			fields.UserID, _ = session.Get("user_id").(string)
-		}
-		if fields.Endpoint == "" {
-			fields.Endpoint = c.OriginalURL()
-		}
-	}
-	return fields
-}
-
-// LogInfo logs an info-level message with default fields included.
-func (l *Logger) LogInfo(fields LogFields, c *fiber.Ctx) {
-	fields = l.addDefaultFields(fields, c)
-	l.zapLogger.Info(fields.Message,
-		zap.String("service", fields.Service),
-		zap.String("endpoint", fields.Endpoint),
-		zap.String("user_id", fields.UserID),
-		zap.String("session_id", fields.SessionID),
-		zap.String("transaction_id", fields.TransactionID),
-		zap.String("trace_id", fields.TraceID),
-		zap.Any("context", fields.Context),
-	)
-}
-
-// LogError logs an error-level message with default fields included.
-func (l *Logger) LogError(fields LogFields, c *fiber.Ctx) {
-	fields = l.addDefaultFields(fields, c)
-	l.zapLogger.Error(fields.Message,
-		zap.String("service", fields.Service),
-		zap.String("endpoint", fields.Endpoint),
-		zap.String("user_id", fields.UserID),
-		zap.String("session_id", fields.SessionID),
-		zap.String("transaction_id", fields.TransactionID),
-		zap.String("trace_id", fields.TraceID),
-		zap.Any("context", fields.Context),
-	)
-}
-
-// LogDebug logs a debug-level message with default fields included.
-func (l *Logger) LogDebug(fields LogFields, c *fiber.Ctx) {
-	fields = l.addDefaultFields(fields, c)
-	l.zapLogger.Debug(fields.Message,
-		zap.String("service", fields.Service),
-		zap.String("endpoint", fields.Endpoint),
-		zap.String("user_id", fields.UserID),
-		zap.String("session_id", fields.SessionID),
-		zap.String("transaction_id", fields.TransactionID),
-		zap.String("trace_id", fields.TraceID),
-		zap.Any("context", fields.Context),
-	)
-}
-
-// LogWarning logs a warning-level message with default fields included.
-func (l *Logger) LogWarning(fields LogFields, c *fiber.Ctx) {
-	fields = l.addDefaultFields(fields, c)
-	l.zapLogger.Warn(fields.Message,
-		zap.String("service", fields.Service),
-		zap.String("endpoint", fields.Endpoint),
-		zap.String("user_id", fields.UserID),
-		zap.String("session_id", fields.SessionID),
-		zap.String("transaction_id", fields.TransactionID),
-		zap.String("trace_id", fields.TraceID),
-		zap.Any("context", fields.Context),
-	)
-}
-
-// LogFatal logs a fatal-level message with default fields included.
-func (l *Logger) LogFatal(fields LogFields, c *fiber.Ctx) {
-	fields = l.addDefaultFields(fields, c)
-	l.zapLogger.Fatal(fields.Message,
-		zap.String("service", fields.Service),
-		zap.String("endpoint", fields.Endpoint),
-		zap.String("user_id", fields.UserID),
-		zap.String("session_id", fields.SessionID),
-		zap.String("transaction_id", fields.TransactionID),
-		zap.String("trace_id", fields.TraceID),
-		zap.Any("context", fields.Context),
-	)
-}
-
 var (
 	singletonLogger *Logger
 	once            sync.Once
@@ -230,7 +134,7 @@ func Initialize(uri, dbName, collectionName string, level zapcore.LevelEnabler) 
 			err = coreErr
 			return
 		}
-		singletonLogger = &Logger{zapLogger: zap.New(mongoCore)}
+		singletonLogger = &Logger{zapLogger: zap.New(mongoCore, zap.AddCaller())}
 	})
 	return err
 }
@@ -241,4 +145,118 @@ func GetLogger() *Logger {
 		log.Fatal("Logger is not initialized. Call Initialize() first.")
 	}
 	return singletonLogger
+}
+
+// LogFields defines the required fields for logging.
+type LogFields struct {
+	Service       string
+	Endpoint      string
+	UserID        string
+	SessionID     string
+	TransactionID string
+	TraceID       string
+	Message       string
+	Context       interface{}
+}
+
+// addDefaultFields adds default values for trace_id, transaction_id, and session_id.
+func (l *Logger) addDefaultFieldsFromContext(fields LogFields, ctx context.Context) LogFields {
+	if ctx != nil {
+		if fields.TraceID == "" {
+			if traceID, ok := ctx.Value(TraceIDKey).(string); ok {
+				fields.TraceID = traceID
+			}
+		}
+		if fields.TransactionID == "" {
+			if transactionID, ok := ctx.Value(TransactionIDKey).(string); ok {
+				fields.TransactionID = transactionID
+			}
+		}
+		if fields.UserID == "" {
+			if userID, ok := ctx.Value(UserIDKey).(string); ok {
+				fields.UserID = userID
+			}
+		}
+		if fields.SessionID == "" {
+			if sessionID, ok := ctx.Value(SessionIDKey).(string); ok {
+				fields.SessionID = sessionID
+			}
+		}
+		if fields.Endpoint == "" {
+			if endpoint, ok := ctx.Value(Endpoint).(string); ok {
+				fields.Endpoint = endpoint
+			}
+		}
+	}
+	return fields
+}
+
+// LogInfo logs an info-level message with default fields included.
+func (l *Logger) LogInfoFromContext(ctx context.Context, fields LogFields) {
+	fields = l.addDefaultFieldsFromContext(fields, ctx)
+	l.zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Info(fields.Message, // Adjust caller tracking
+		zap.String("service", fields.Service),
+		zap.String("endpoint", fields.Endpoint),
+		zap.String("user_id", fields.UserID),
+		zap.String("session_id", fields.SessionID),
+		zap.String("transaction_id", fields.TransactionID),
+		zap.String("trace_id", fields.TraceID),
+		zap.Any("context", fields.Context),
+	)
+}
+
+// LogError logs an error-level message with default fields included.
+func (l *Logger) LogErrorFromContext(ctx context.Context, fields LogFields) {
+	fields = l.addDefaultFieldsFromContext(fields, ctx)
+	l.zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Error(fields.Message, // Ensure caller tracking
+		zap.String("service", fields.Service),
+		zap.String("endpoint", fields.Endpoint),
+		zap.String("user_id", fields.UserID),
+		zap.String("session_id", fields.SessionID),
+		zap.String("transaction_id", fields.TransactionID),
+		zap.String("trace_id", fields.TraceID),
+		zap.Any("context", fields.Context),
+	)
+}
+
+// LogDebug logs a debug-level message with default fields included.
+func (l *Logger) LogDebugFromContext(ctx context.Context, fields LogFields) {
+	fields = l.addDefaultFieldsFromContext(fields, ctx)
+	l.zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Debug(fields.Message, // Ensure caller tracking
+		zap.String("service", fields.Service),
+		zap.String("endpoint", fields.Endpoint),
+		zap.String("user_id", fields.UserID),
+		zap.String("session_id", fields.SessionID),
+		zap.String("transaction_id", fields.TransactionID),
+		zap.String("trace_id", fields.TraceID),
+		zap.Any("context", fields.Context),
+	)
+}
+
+// LogWarning logs a warning-level message with default fields included.
+func (l *Logger) LogWarningFromContext(ctx context.Context, fields LogFields) {
+	fields = l.addDefaultFieldsFromContext(fields, ctx)
+	l.zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Warn(fields.Message, // Ensure caller tracking
+		zap.String("service", fields.Service),
+		zap.String("endpoint", fields.Endpoint),
+		zap.String("user_id", fields.UserID),
+		zap.String("session_id", fields.SessionID),
+		zap.String("transaction_id", fields.TransactionID),
+		zap.String("trace_id", fields.TraceID),
+		zap.Any("context", fields.Context),
+	)
+}
+
+// LogFatal logs a fatal-level message with default fields included.
+func (l *Logger) LogFatalFromContext(ctx context.Context, fields LogFields) {
+	fields = l.addDefaultFieldsFromContext(fields, ctx)
+	l.zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Fatal(fields.Message, // Ensure caller tracking
+		zap.String("service", fields.Service),
+		zap.String("endpoint", fields.Endpoint),
+		zap.String("user_id", fields.UserID),
+		zap.String("session_id", fields.SessionID),
+		zap.String("transaction_id", fields.TransactionID),
+		zap.String("trace_id", fields.TraceID),
+		zap.Any("context", fields.Context),
+	)
 }

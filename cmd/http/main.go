@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"golizilla/config"
-	"golizilla/handler/middleware"
 	"golizilla/persistence/database"
 	"golizilla/persistence/logger"
 	"golizilla/route"
@@ -44,7 +43,6 @@ func main() {
 	}
 
 	// Start API
-	middleware.InitSessionStore(cfg)
 	route.RunServer(cfg, gormDB)
 
 }

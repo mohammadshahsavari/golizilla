@@ -4,6 +4,7 @@ import (
 	"golizilla/config"
 	"golizilla/handler/presenter"
 	"golizilla/internal/apperrors"
+	"golizilla/persistence/logger"
 	"golizilla/service/utils"
 	"time"
 
@@ -84,22 +85,30 @@ func InitSessionStore(cfg *config.Config) {
 	})
 }
 
-// IDMiddleware generates both Trace ID and Transaction ID.
-func IDMiddleware() fiber.Handler {
+// ContextMiddleware adds trace_id, transaction_id, and user_id to fasthttp.RequestCtx.
+func ContextMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Generate or propagate Trace ID
-		traceID := c.Get("X-Trace-ID")
-		if traceID == "" {
-			traceID = uuid.New().String()
-			c.Set("X-Trace-ID", traceID) // Add it to the response header
-		}
-		c.Locals("trace_id", traceID)
-
-		// Generate a new Transaction ID
+		// Generate trace ID and transaction ID
+		traceID := c.Get("X-Trace-ID", uuid.New().String())
 		transactionID := uuid.New().String()
-		c.Set("X-Transaction-ID", transactionID) // Add it to the response header
-		c.Locals("transaction_id", transactionID)
 
+		// Get user ID from locals
+		userID, ok := c.Locals("user_id").(uuid.UUID)
+		if !ok {
+			userID = uuid.Nil
+		}
+
+		sessionID := c.Cookies("session_id", "no-session")
+		endpoint := c.OriginalURL()
+
+		// Store values directly in fasthttp.RequestCtx
+		c.Context().SetUserValue(logger.TraceIDKey, traceID)
+		c.Context().SetUserValue(logger.TransactionIDKey, transactionID)
+		c.Context().SetUserValue(logger.UserIDKey, userID.String())
+		c.Context().SetUserValue(logger.SessionIDKey, sessionID)
+		c.Context().SetUserValue(logger.Endpoint, endpoint)
+
+		// Propagate the context
 		return c.Next()
 	}
 }

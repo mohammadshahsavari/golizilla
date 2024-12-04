@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Role struct {
@@ -15,4 +16,12 @@ type Role struct {
 	Users          []*User          `gorm:"foreinKey:RoleId"`
 	Privileges     []*Privilege     `gorm:"many2many:RolePrivilege"`
 	Questionnaires []*Questionnaire `gorm:"many2many:RolePrivilegeOnQuestionnaire"`
+}
+
+// BeforeCreate is a GORM hook to generate a UUID before creating a new record.
+func (r *Role) BeforeCreate(tx *gorm.DB) error {
+	if r.ID == uuid.Nil {
+		r.ID = uuid.New()
+	}
+	return nil
 }

@@ -1,13 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"golizilla/config"
 	"golizilla/handler/middleware"
 	"golizilla/persistence/database"
+	"golizilla/persistence/logger"
 	"golizilla/route"
 
+	"go.uber.org/zap/zapcore"
 	"gorm.io/gorm"
 )
 
@@ -30,6 +33,13 @@ func main() {
 	gormDB, ok := db.(*gorm.DB)
 	if !ok {
 		log.Printf("Failed to assert database to *gorm.DB")
+		return
+	}
+
+	// Initialize the singleton logger
+	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%d", cfg.MongoDbUsername, cfg.MongoDbPassword, cfg.MongoDbHost, cfg.MongoDbPort)
+	if err := logger.Initialize(mongoURI, "logsdb", "logs", zapcore.InfoLevel); err != nil {
+		log.Println("Failed to initialize logger:", err)
 		return
 	}
 

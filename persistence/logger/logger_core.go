@@ -2,8 +2,13 @@ package logger
 
 import (
 	"context"
+	"log"
+	"sync"
 	"time"
 
+	"golizilla/handler/middleware" // Import middleware for session handling
+
+	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -79,22 +84,18 @@ func (m *MongoDBCore) Check(entry zapcore.Entry, ce *zapcore.CheckedEntry) *zapc
 
 // Write writes the log entry to MongoDB.
 func (m *MongoDBCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
-	// Combine fields from With and the current log call
 	allFields := append(m.fields, fields...)
 
-	// Encode the log entry
 	buffer, err := m.encoder.EncodeEntry(entry, allFields)
 	if err != nil {
 		return err
 	}
 
-	// Convert the log entry to a BSON document
 	var logDoc bson.M
 	if err := bson.UnmarshalExtJSON(buffer.Bytes(), false, &logDoc); err != nil {
 		return err
 	}
 
-	// Add the log to MongoDB
 	_, err = m.collection.InsertOne(context.TODO(), logDoc)
 	return err
 }
@@ -109,21 +110,6 @@ type Logger struct {
 	zapLogger *zap.Logger
 }
 
-// NewLogger creates a new Logger instance.
-func NewLogger(uri, dbName, collectionName string, level zapcore.LevelEnabler) (*Logger, error) {
-	mongoCore, err := NewMongoDBCore(uri, dbName, collectionName, level)
-	if err != nil {
-		return nil, err
-	}
-	zapLogger := zap.New(mongoCore)
-	return &Logger{zapLogger: zapLogger}, nil
-}
-
-// Close syncs the logger.
-func (l *Logger) Close() error {
-	return l.zapLogger.Sync()
-}
-
 // LogFields defines the required fields for logging.
 type LogFields struct {
 	Service       string
@@ -136,8 +122,33 @@ type LogFields struct {
 	Context       interface{}
 }
 
-// LogInfo logs an info-level message with predefined fields.
-func (l *Logger) LogInfo(fields LogFields) {
+// addDefaultFields adds default values for trace_id, transaction_id, and session_id.
+func (l *Logger) addDefaultFields(fields LogFields, c *fiber.Ctx) LogFields {
+	if c != nil {
+		if fields.TraceID == "" {
+			fields.TraceID, _ = c.Locals("trace_id").(string)
+		}
+		if fields.TransactionID == "" {
+			fields.TransactionID, _ = c.Locals("transaction_id").(string)
+		}
+		if fields.SessionID == "" {
+			session, _ := middleware.Store.Get(c)
+			fields.SessionID = session.ID()
+		}
+		if fields.UserID == "" {
+			session, _ := middleware.Store.Get(c)
+			fields.UserID, _ = session.Get("user_id").(string)
+		}
+		if fields.Endpoint == "" {
+			fields.Endpoint = c.OriginalURL()
+		}
+	}
+	return fields
+}
+
+// LogInfo logs an info-level message with default fields included.
+func (l *Logger) LogInfo(fields LogFields, c *fiber.Ctx) {
+	fields = l.addDefaultFields(fields, c)
 	l.zapLogger.Info(fields.Message,
 		zap.String("service", fields.Service),
 		zap.String("endpoint", fields.Endpoint),
@@ -149,8 +160,9 @@ func (l *Logger) LogInfo(fields LogFields) {
 	)
 }
 
-// LogError logs an error-level message with predefined fields.
-func (l *Logger) LogError(fields LogFields) {
+// LogError logs an error-level message with default fields included.
+func (l *Logger) LogError(fields LogFields, c *fiber.Ctx) {
+	fields = l.addDefaultFields(fields, c)
 	l.zapLogger.Error(fields.Message,
 		zap.String("service", fields.Service),
 		zap.String("endpoint", fields.Endpoint),
@@ -162,8 +174,9 @@ func (l *Logger) LogError(fields LogFields) {
 	)
 }
 
-// LogError logs an debug-level message with predefined fields.
-func (l *Logger) LogDebug(fields LogFields) {
+// LogDebug logs a debug-level message with default fields included.
+func (l *Logger) LogDebug(fields LogFields, c *fiber.Ctx) {
+	fields = l.addDefaultFields(fields, c)
 	l.zapLogger.Debug(fields.Message,
 		zap.String("service", fields.Service),
 		zap.String("endpoint", fields.Endpoint),
@@ -175,8 +188,9 @@ func (l *Logger) LogDebug(fields LogFields) {
 	)
 }
 
-// LogError logs an warning-level message with predefined fields.
-func (l *Logger) LogWarning(fields LogFields) {
+// LogWarning logs a warning-level message with default fields included.
+func (l *Logger) LogWarning(fields LogFields, c *fiber.Ctx) {
+	fields = l.addDefaultFields(fields, c)
 	l.zapLogger.Warn(fields.Message,
 		zap.String("service", fields.Service),
 		zap.String("endpoint", fields.Endpoint),
@@ -188,8 +202,9 @@ func (l *Logger) LogWarning(fields LogFields) {
 	)
 }
 
-// LogError logs an fatal-level message with predefined fields.
-func (l *Logger) LogFatal(fields LogFields) {
+// LogFatal logs a fatal-level message with default fields included.
+func (l *Logger) LogFatal(fields LogFields, c *fiber.Ctx) {
+	fields = l.addDefaultFields(fields, c)
 	l.zapLogger.Fatal(fields.Message,
 		zap.String("service", fields.Service),
 		zap.String("endpoint", fields.Endpoint),
@@ -199,4 +214,31 @@ func (l *Logger) LogFatal(fields LogFields) {
 		zap.String("trace_id", fields.TraceID),
 		zap.Any("context", fields.Context),
 	)
+}
+
+var (
+	singletonLogger *Logger
+	once            sync.Once
+)
+
+// Initialize sets up the singleton logger instance.
+func Initialize(uri, dbName, collectionName string, level zapcore.LevelEnabler) error {
+	var err error
+	once.Do(func() {
+		mongoCore, coreErr := NewMongoDBCore(uri, dbName, collectionName, level)
+		if coreErr != nil {
+			err = coreErr
+			return
+		}
+		singletonLogger = &Logger{zapLogger: zap.New(mongoCore)}
+	})
+	return err
+}
+
+// GetLogger returns the singleton logger instance.
+func GetLogger() *Logger {
+	if singletonLogger == nil {
+		log.Fatal("Logger is not initialized. Call Initialize() first.")
+	}
+	return singletonLogger
 }

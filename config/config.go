@@ -11,14 +11,20 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	Host       string
+	Host string
+	Port int
+	Env  string
+
 	DBUsername string
 	DBPassword string
 	DBHost     string
 	DBName     string
-	Env        string
-	Port       int
 	DBPort     int
+
+	MongoDbUsername string
+	MongoDbPassword string
+	MongoDbHost     string
+	MongoDbPort     int
 
 	EmailSender       string
 	EmailSMTPHost     string
@@ -42,14 +48,20 @@ func LoadConfig() (*Config, error) {
 
 	// Create Config instance from environment variables
 	cfg := &Config{
-		Host:       getEnv("HOST", "0.0.0.0"),
-		Port:       getEnvAsInt("PORT", 8080),
+		Host: getEnv("HOST", "0.0.0.0"),
+		Port: getEnvAsInt("PORT", 8080),
+		Env:  getEnv("ENV", "development"),
+
 		DBUsername: getEnv("DB_USERNAME", "username"),
 		DBPassword: getEnv("DB_PASSWORD", "password123"),
 		DBHost:     getEnv("DB_HOST", "localhost"),
 		DBPort:     getEnvAsInt("DB_PORT", 5432),
 		DBName:     getEnv("DB_NAME", "db"),
-		Env:        getEnv("ENV", "development"),
+
+		MongoDbUsername: getEnv("MONGODB_USERNAME", "username"),
+		MongoDbPassword: getEnv("MONGODB_PASSWORD", "password123"),
+		MongoDbHost:     getEnv("MONGODB_HOST", "localhost"),
+		MongoDbPort:     getEnvAsInt("MONGODB_PORT", 27107),
 
 		EmailSender:       getEnv("EMAIL_SENDER", "no-reply@example.com"),
 		EmailSMTPHost:     getEnv("EMAIL_SMTP_HOST", "smtp.example.com"),

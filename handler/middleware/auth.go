@@ -83,3 +83,23 @@ func InitSessionStore(cfg *config.Config) {
 		Expiration:     cfg.JWTExpiresIn * time.Second,
 	})
 }
+
+// IDMiddleware generates both Trace ID and Transaction ID.
+func IDMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Generate or propagate Trace ID
+		traceID := c.Get("X-Trace-ID")
+		if traceID == "" {
+			traceID = uuid.New().String()
+			c.Set("X-Trace-ID", traceID) // Add it to the response header
+		}
+		c.Locals("trace_id", traceID)
+
+		// Generate a new Transaction ID
+		transactionID := uuid.New().String()
+		c.Set("X-Transaction-ID", transactionID) // Add it to the response header
+		c.Locals("transaction_id", transactionID)
+
+		return c.Next()
+	}
+}

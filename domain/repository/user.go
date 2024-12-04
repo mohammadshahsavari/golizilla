@@ -16,7 +16,7 @@ type IUserRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	Update(ctx context.Context, user *model.User) error
 	// profile
-	CreateNotification(ctx context.Context, userId uuid.UUID, notification *model.Notification) error 
+	CreateNotification(ctx context.Context, userId uuid.UUID, notification *model.Notification) error
 	FindByIDWithNotifications(ctx context.Context, userId uuid.UUID) (*model.User, error)
 }
 
@@ -59,20 +59,20 @@ func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
 
 func (r *UserRepository) CreateNotification(ctx context.Context, userId uuid.UUID, notification *model.Notification) error {
 	notification.UserID = userId
-    if err := r.db.WithContext(ctx).Create(notification).Error; err != nil {
-        return fmt.Errorf("failed to create notification: %w", err)
-    }
-    return nil
+	if err := r.db.WithContext(ctx).Create(notification).Error; err != nil {
+		return fmt.Errorf("failed to create notification: %w", err)
+	}
+	return nil
 }
 
 // it's need to test
 func (r *UserRepository) FindByIDWithNotifications(ctx context.Context, userId uuid.UUID) (*model.User, error) {
-    var user model.User
-    if err := r.db.WithContext(ctx).
-        Preload("NotificationList").
-        Where("id = ?", userId).
-        First(&user).Error; err != nil {
-        return nil, err
-    }
-    return &user, nil
+	var user model.User
+	if err := r.db.WithContext(ctx).
+		Preload("NotificationList").
+		Where("id = ?", userId).
+		First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

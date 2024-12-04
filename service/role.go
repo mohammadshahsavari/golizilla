@@ -11,6 +11,7 @@ import (
 
 type IRoleService interface {
 	CreateRole(ctx context.Context, name, description string) (*model.Role, error)
+	AddPrivilege(ctx context.Context, roleId uuid.UUID, privileges ...string) error
 	GetRoleById(ctx context.Context, id uuid.UUID) (*model.Role, error)
 	GetRoleByUserId(ctx context.Context, userId uuid.UUID) (*model.Role, error)
 	HasPrivileges(ctx context.Context, id uuid.UUID, privileges ...string) (bool, error)
@@ -22,7 +23,10 @@ type roleService struct {
 	rolePrivilegeRepo repository.IRolePrivilegeRepository
 }
 
-func NewRoleService(roleRepo repository.IRoleRepository, userRepo repository.IUserRepository, rolePrivilegeRepo repository.IRolePrivilegeRepository) IRoleService {
+func NewRoleService(roleRepo repository.IRoleRepository,
+	userRepo repository.IUserRepository,
+	rolePrivilegeRepo repository.IRolePrivilegeRepository) IRoleService {
+
 	return &roleService{
 		roleRepo:          roleRepo,
 		userRepo:          userRepo,
@@ -41,6 +45,20 @@ func (s *roleService) CreateRole(ctx context.Context, name, description string) 
 		return nil, err
 	}
 	return role, nil
+}
+
+func (s *roleService) AddPrivilege(ctx context.Context, roleId uuid.UUID, privileges ...string) error {
+	for _, privilege := range privileges {
+		rolePrivilege := &model.RolePrivilege{
+			RoleId:      roleId,
+			PrivilegeId: privilege,
+		}
+		if err := s.rolePrivilegeRepo.Add(ctx, rolePrivilege); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *roleService) GetRoleById(ctx context.Context, id uuid.UUID) (*model.Role, error) {

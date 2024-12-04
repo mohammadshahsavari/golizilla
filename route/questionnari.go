@@ -2,10 +2,10 @@ package route
 
 import (
 	"golizilla/config"
-	"golizilla/domain/model"
 	respository "golizilla/domain/repository"
 	"golizilla/handler"
 	"golizilla/handler/middleware"
+	privilegeconstants "golizilla/internal/privilegeConstants"
 	"golizilla/service"
 
 	"github.com/gofiber/contrib/websocket"
@@ -31,8 +31,7 @@ func setupQuestionnariRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	authorizationMiddleware := middleware.AuthorizationMiddleware(authorizationsService)
 	headerAuthMiddleware := middleware.HeaderAuthMiddleware(cfg)
 
-	questionnariGroup.Post("/", authMiddleware, authorizationMiddleware(model.CreateQuestionnari), questionnariHandler.Create)
-
+	questionnariGroup.Post("/", authMiddleware, authorizationMiddleware(privilegeconstants.CreateQuestionnari), questionnariHandler.Create)
 	questionnariGroup.Get("/:id", authMiddleware, questionnariHandler.GetById)
 	questionnariGroup.Get("/ownerId/:id", authMiddleware, questionnariHandler.GetByOwnerId)
 	questionnariGroup.Post("/update", authMiddleware, questionnariHandler.Update)

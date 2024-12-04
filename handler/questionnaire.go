@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"golizilla/handler/presenter"
 	"golizilla/internal/apperrors"
@@ -24,6 +25,7 @@ func NewQuestionnariHandler(questionnariService service.IQuestionnaireService) *
 }
 
 func (q *QuestionnariHandler) Create(c *fiber.Ctx) error {
+	ctx := c.Context()
 	var request presenter.CreateQuestionnariRequest
 	if err := c.BodyParser(&request); err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
@@ -35,7 +37,7 @@ func (q *QuestionnariHandler) Create(c *fiber.Ctx) error {
 
 	userModel := request.ToDomain()
 	userModel.OwnerId = c.Locals("user_id").(uuid.UUID)
-	if id, err := q.questionnariService.Create(userModel); err != nil {
+	if id, err := q.questionnariService.Create(ctx, userModel); err != nil {
 		//log
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	} else {
@@ -44,11 +46,12 @@ func (q *QuestionnariHandler) Create(c *fiber.Ctx) error {
 }
 
 func (q *QuestionnariHandler) Delete(c *fiber.Ctx) error {
+	ctx := c.Context()
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	err = q.questionnariService.Delete(id)
+	err = q.questionnariService.Delete(ctx, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presenter.SendError(c, fiber.StatusNotFound, err.Error())
@@ -62,6 +65,7 @@ func (q *QuestionnariHandler) Delete(c *fiber.Ctx) error {
 }
 
 func (q *QuestionnariHandler) Update(c *fiber.Ctx) error {
+	ctx := c.Context()
 	var request presenter.CreateQuestionnariRequest
 	if err := c.BodyParser(&request); err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
@@ -73,7 +77,7 @@ func (q *QuestionnariHandler) Update(c *fiber.Ctx) error {
 
 	userModel := request.ToDomain()
 
-	if err := q.questionnariService.Update(userModel); err != nil {
+	if err := q.questionnariService.Update(ctx, userModel); err != nil {
 		//log
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
@@ -82,11 +86,12 @@ func (q *QuestionnariHandler) Update(c *fiber.Ctx) error {
 }
 
 func (q *QuestionnariHandler) GetById(c *fiber.Ctx) error {
+	ctx := c.Context()
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	questionnari, err := q.questionnariService.GetById(id)
+	questionnari, err := q.questionnariService.GetById(ctx, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presenter.SendError(c, fiber.StatusNotFound, err.Error())
@@ -100,11 +105,12 @@ func (q *QuestionnariHandler) GetById(c *fiber.Ctx) error {
 }
 
 func (q *QuestionnariHandler) GetByOwnerId(c *fiber.Ctx) error {
+	ctx := c.Context()
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	questionnaries, err := q.questionnariService.GetByOwnerId(id)
+	questionnaries, err := q.questionnariService.GetByOwnerId(ctx, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presenter.SendError(c, fiber.StatusNotFound, err.Error())
@@ -124,7 +130,7 @@ func (q *QuestionnariHandler) GetResults(c *websocket.Conn) {
 		c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
 		return
 	}
-	_, err = q.questionnariService.GetById(id)
+	_, err = q.questionnariService.GetById(context.Background(), id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
@@ -136,7 +142,7 @@ func (q *QuestionnariHandler) GetResults(c *websocket.Conn) {
 
 	var lastValue uint = 0
 	for {
-		questionnari, err := q.questionnariService.GetById(id)
+		questionnari, err := q.questionnariService.GetById(context.Background(), id)
 		if err != nil {
 			//log
 			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))

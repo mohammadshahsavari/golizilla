@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"golizilla/domain/model"
 
 	"github.com/google/uuid"
@@ -8,11 +9,11 @@ import (
 )
 
 type IQuestionnaireRepository interface {
-	Add(questionnaire *model.Questionnaire) error
-	Delete(id uuid.UUID) error
-	Update(questionnaire *model.Questionnaire) error
-	GetById(id uuid.UUID) (*model.Questionnaire, error)
-	GetByOwnerId(ownerId uuid.UUID) ([]model.Questionnaire, error)
+	Add(ctx context.Context, questionnaire *model.Questionnaire) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	Update(ctx context.Context, questionnaire *model.Questionnaire) error
+	GetById(ctx context.Context, id uuid.UUID) (*model.Questionnaire, error)
+	GetByOwnerId(ctx context.Context, ownerId uuid.UUID) ([]model.Questionnaire, error)
 }
 
 type questionnaireRepository struct {
@@ -25,33 +26,33 @@ func NewQuestionnaireRepository(db *gorm.DB) IQuestionnaireRepository {
 	}
 }
 
-func (r *questionnaireRepository) Add(questionnaire *model.Questionnaire) error {
-	err := r.db.Create(questionnaire).Error
+func (r *questionnaireRepository) Add(ctx context.Context, questionnaire *model.Questionnaire) error {
+	err := r.db.WithContext(ctx).Create(questionnaire).Error
 	if err != nil {
 		//log
 	}
 	return err
 }
 
-func (r *questionnaireRepository) Delete(id uuid.UUID) error {
-	err := r.db.Delete(&model.Questionnaire{}, id).Error
+func (r *questionnaireRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	err := r.db.WithContext(ctx).Delete(&model.Questionnaire{}, id).Error
 	if err != nil {
 		//log
 	}
 	return err
 }
 
-func (r *questionnaireRepository) Update(questionnaire *model.Questionnaire) error {
-	err := r.db.Save(questionnaire).Error
+func (r *questionnaireRepository) Update(ctx context.Context, questionnaire *model.Questionnaire) error {
+	err := r.db.WithContext(ctx).Save(questionnaire).Error
 	if err != nil {
 		//log
 	}
 	return err
 }
 
-func (r *questionnaireRepository) GetById(id uuid.UUID) (*model.Questionnaire, error) {
+func (r *questionnaireRepository) GetById(ctx context.Context, id uuid.UUID) (*model.Questionnaire, error) {
 	var questionnaire model.Questionnaire
-	err := r.db.Find(&questionnaire, id).Error
+	err := r.db.WithContext(ctx).Find(&questionnaire, id).Error
 	if err != nil {
 		//log
 	}
@@ -59,9 +60,9 @@ func (r *questionnaireRepository) GetById(id uuid.UUID) (*model.Questionnaire, e
 	return &questionnaire, err
 }
 
-func (r *questionnaireRepository) GetByOwnerId(ownerId uuid.UUID) ([]model.Questionnaire, error) {
+func (r *questionnaireRepository) GetByOwnerId(ctx context.Context, ownerId uuid.UUID) ([]model.Questionnaire, error) {
 	var questionnaires []model.Questionnaire
-	err := r.db.Where("owner_id = ?", ownerId).Find(&questionnaires, ownerId).Error
+	err := r.db.WithContext(ctx).Where("owner_id = ?", ownerId).Find(&questionnaires, ownerId).Error
 	if err != nil {
 		//log
 	}

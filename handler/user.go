@@ -265,7 +265,7 @@ func (h *UserHandler) GetNotificationListList(c *fiber.Ctx) error {
 		c.Context().Logger().Printf("[GetNotifications] Internal error: %v", err)
 		return h.handleError(c, err)
 	}
-	
+
 	return presenter.Send(c, fiber.StatusOK, true, "user notifications successfully fetched", notifList, nil)
 }
 

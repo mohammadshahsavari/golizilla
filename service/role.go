@@ -37,14 +37,14 @@ func (s *roleService) CreateRole(ctx context.Context, name, description string) 
 		Description: description,
 		CreatedAt:   time.Now(),
 	}
-	if err := s.roleRepo.Add(role); err != nil {
+	if err := s.roleRepo.Add(ctx, role); err != nil {
 		return nil, err
 	}
 	return role, nil
 }
 
 func (s *roleService) GetRoleById(ctx context.Context, id uuid.UUID) (*model.Role, error) {
-	role, err := s.roleRepo.GetById(id)
+	role, err := s.roleRepo.GetById(ctx, id)
 	if err != nil {
 		//log
 	}
@@ -57,7 +57,7 @@ func (s *roleService) GetRoleByUserId(ctx context.Context, userId uuid.UUID) (*m
 		//log
 		return nil, err
 	}
-	role, err := s.roleRepo.GetById(user.RoleId)
+	role, err := s.roleRepo.GetById(ctx, user.RoleId)
 	if err != nil {
 		//log
 		return nil, err
@@ -71,7 +71,7 @@ func (s *roleService) HasPrivileges(ctx context.Context, id uuid.UUID, privilege
 		//log
 		return false, err
 	}
-	rolePrivileges, err := s.rolePrivilegeRepo.GetRolePrivilegesByPrivileges(user.RoleId, privileges...)
+	rolePrivileges, err := s.rolePrivilegeRepo.GetRolePrivilegesByPrivileges(ctx, user.RoleId, privileges...)
 	if err != nil {
 		//log
 		return false, err

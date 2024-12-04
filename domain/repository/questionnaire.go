@@ -26,7 +26,6 @@ func NewQuestionnaireRepository(db *gorm.DB) IQuestionnaireRepository {
 }
 
 func (r *questionnaireRepository) Add(questionnaire *model.Questionnaire) error {
-
 	err := r.db.Create(questionnaire).Error
 	if err != nil {
 		//log

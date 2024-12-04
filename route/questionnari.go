@@ -2,6 +2,7 @@ package route
 
 import (
 	"golizilla/config"
+	"golizilla/domain/model"
 	respository "golizilla/domain/repository"
 	"golizilla/handler"
 	"golizilla/handler/middleware"
@@ -16,15 +17,21 @@ func setupQuestionnariRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	questionnariGroup := app.Group("/questionnari")
 
 	questionnariRepo := respository.NewQuestionnaireRepository(db)
+	roleRepo := respository.NewRoleRepository(db)
+	userRepo := respository.NewUserRepository(db)
+	rolePrivilegeRepo := respository.NewRolePrivilegeRepository(db)
 
 	questionnariService := service.NewQuestionnaireService(questionnariRepo)
+	roleService := service.NewRoleService(roleRepo, userRepo, rolePrivilegeRepo)
+	authorizationsService := service.NewAuthorizationService(roleService)
 
 	questionnariHandler := handler.NewQuestionnariHandler(questionnariService)
 
 	authMiddleware := middleware.AuthMiddleware(cfg)
+	authorizationMiddleware := middleware.AuthorizationMiddleware(authorizationsService)
 	headerAuthMiddleware := middleware.HeaderAuthMiddleware(cfg)
 
-	questionnariGroup.Post("/", authMiddleware, questionnariHandler.Create)
+	questionnariGroup.Post("/", authMiddleware, authorizationMiddleware(model.CreateQuestionnari), questionnariHandler.Create)
 
 	questionnariGroup.Get("/:id", authMiddleware, questionnariHandler.GetById)
 	questionnariGroup.Get("/ownerId/:id", authMiddleware, questionnariHandler.GetByOwnerId)

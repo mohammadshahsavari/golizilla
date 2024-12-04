@@ -31,6 +31,11 @@ type Config struct {
 
 	TwoFAExpiresIn        time.Duration
 	VerificationExpiresIn time.Duration
+
+	AdminUsername   string
+	AdminPassword   string
+	AdminEmail      string
+	AdminNationalID string
 }
 
 // LoadConfig loads environment variables from the .env file and returns a Config struct
@@ -42,26 +47,27 @@ func LoadConfig() (*Config, error) {
 
 	// Create Config instance from environment variables
 	cfg := &Config{
-		Host:       getEnv("HOST", "0.0.0.0"),
-		Port:       getEnvAsInt("PORT", 8080),
-		DBUsername: getEnv("DB_USERNAME", "username"),
-		DBPassword: getEnv("DB_PASSWORD", "password123"),
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnvAsInt("DB_PORT", 5432),
-		DBName:     getEnv("DB_NAME", "db"),
-		Env:        getEnv("ENV", "development"),
-
-		EmailSender:       getEnv("EMAIL_SENDER", "no-reply@example.com"),
-		EmailSMTPHost:     getEnv("EMAIL_SMTP_HOST", "smtp.example.com"),
-		EmailSMTPPort:     getEnvAsInt("EMAIL_SMTP_PORT", 587),
-		EmailSMTPUsername: getEnv("EMAIL_SMTP_USERNAME", ""),
-		EmailSMTPPassword: getEnv("EMAIL_SMTP_PASSWORD", ""),
-
-		JWTSecretKey: getEnv("JWT_SECRET_KEY", "your-default-secret-key"),
-		JWTExpiresIn: time.Duration(getEnvAsInt("JWT_EXPIRES_IN", 86400)) * time.Second,
-
+		Host:                  getEnv("HOST", "0.0.0.0"),
+		DBUsername:            getEnv("DB_USERNAME", "username"),
+		DBPassword:            getEnv("DB_PASSWORD", "password123"),
+		DBHost:                getEnv("DB_HOST", "localhost"),
+		DBName:                getEnv("DB_NAME", "db"),
+		Env:                   getEnv("ENV", "development"),
+		Port:                  getEnvAsInt("PORT", 8080),
+		DBPort:                getEnvAsInt("DB_PORT", 5432),
+		EmailSender:           getEnv("EMAIL_SENDER", "no-reply@example.com"),
+		EmailSMTPHost:         getEnv("EMAIL_SMTP_HOST", "smtp.example.com"),
+		EmailSMTPPort:         getEnvAsInt("EMAIL_SMTP_PORT", 587),
+		EmailSMTPUsername:     getEnv("EMAIL_SMTP_USERNAME", ""),
+		EmailSMTPPassword:     getEnv("EMAIL_SMTP_PASSWORD", ""),
+		JWTSecretKey:          getEnv("JWT_SECRET_KEY", "your-default-secret-key"),
+		JWTExpiresIn:          time.Duration(getEnvAsInt("JWT_EXPIRES_IN", 86400)) * time.Second,
 		TwoFAExpiresIn:        time.Duration(getEnvAsInt("2FA_EXPIRES_IN", 600)) * time.Second,
 		VerificationExpiresIn: time.Duration(getEnvAsInt("VERIFICATION_EXPIRES_IN", 900)) * time.Second,
+		AdminUsername:         getEnv("ADMIN_USERNAME", "admin"),
+		AdminPassword:         getEnv("ADMIN_PASSWORD", "password123"),
+		AdminEmail:            getEnv("ADMIN_EMAIL", "admin@example.com"),
+		AdminNationalID:       getEnv("ADMIN_NATIONAL_ID", "1234567890"),
 	}
 
 	return cfg, nil

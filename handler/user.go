@@ -390,7 +390,14 @@ func (h *UserHandler) Logout(c *fiber.Ctx) error {
 		Secure:   h.Config.Env == "production",
 		SameSite: "Strict",
 	})
-
+	c.Cookie(&fiber.Cookie{
+		Name:     "session_id",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour), // Set expiry in the past
+		HTTPOnly: true,
+		Secure:   h.Config.Env == "production",
+		SameSite: "Strict",
+	})
 	return presenter.Send(c, fiber.StatusOK, true, "Logged out successfully", nil, nil)
 }
 

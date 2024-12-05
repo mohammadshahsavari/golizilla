@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -116,4 +117,16 @@ func ContextMiddleware() fiber.Handler {
 		// Propagate the context
 		return c.Next()
 	}
+}
+
+func CSRFProtection(cfg *config.Config) fiber.Handler {
+	return csrf.New(csrf.Config{
+		KeyLookup:      "header:X-CSRF-Token", // Ensure this matches where you send the token
+		CookieName:     "csrf_token",          // Name of the CSRF cookie
+		CookieHTTPOnly: true,                  // Make the cookie HTTP-only
+		CookieSecure:   cfg.Env == "production",
+		CookieSameSite: "Strict",
+		ContextKey:     "csrf_token", // Context key for the token
+		Expiration:     cfg.JWTExpiresIn * time.Second,
+	})
 }

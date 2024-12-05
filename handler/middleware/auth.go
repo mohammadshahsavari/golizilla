@@ -45,7 +45,7 @@ func AuthMiddleware(cfg *config.Config) fiber.Handler {
 		}
 
 		// Parse user ID from claims
-		_, err = utils.ParseUUID(claims["user_id"].(string))
+		UserIDJWT, err := utils.ParseUUID(claims["user_id"].(string))
 		if err != nil {
 			return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
 		}
@@ -66,6 +66,11 @@ func AuthMiddleware(cfg *config.Config) fiber.Handler {
 		userID, err := uuid.Parse(userIDValue.(string))
 		if err != nil {
 			return presenter.SendError(c, fiber.StatusUnauthorized, "Invalid session data")
+		}
+
+		// check for CSRF
+		if UserIDJWT != userID {
+			return presenter.SendError(c, fiber.StatusUnauthorized, "Unauthorized access")
 		}
 
 		// Store user ID in locals for downstream handlers

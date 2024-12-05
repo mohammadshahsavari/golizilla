@@ -7,6 +7,7 @@ import (
 	"golizilla/handler/middleware"
 	"golizilla/handler/presenter"
 	"golizilla/internal/apperrors"
+	"golizilla/internal/logmessages"
 	"golizilla/persistence/logger"
 	"golizilla/service"
 	"golizilla/service/utils"
@@ -180,8 +181,8 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	}
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
-		Service: "user_handler",
-		Message: "User logged in successfully",
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserLoginSuccessful,
 	})
 	// If 2FA is not enabled, proceed to generate JWT token
 	return h.generateAndSetToken(c, user)
@@ -251,6 +252,11 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	if err != nil {
 		return h.handleError(c, err)
 	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserGetProfileSuccessful,
+	})
 
 	// Respond with user data
 	return presenter.Send(c, fiber.StatusOK, true, "User profile fetched successfully", presenter.NewUserResponse(user), nil)

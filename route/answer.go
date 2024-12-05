@@ -10,30 +10,34 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupQuestionRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, questionService service.IQuestionService) {
+func SetupAnswerRoutes(
+	app *fiber.App,
+	db *gorm.DB,
+	cfg *config.Config,
+	answerService service.IAnswerService,
+) {
 	// Create a group for user routes
-	questionGroup := app.Group("/questions")
+	answerGroup := app.Group("/answers")
 
 	// Initialize handlers
-	questionHandler := handler.NewQuestionHandler(questionService)
+	answerHandler := handler.NewAnswerHandler(answerService)
 
 	// Initialize the JWT middleware with the config
 	authMiddleware := middleware.AuthMiddleware(cfg)
 
 	// Protected routes
-	questionGroup.Post("/create",
+	answerGroup.Post("/create",
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.Create)
+		authMiddleware, answerHandler.Create)
 
-	questionGroup.Put("/update/:id",
+	answerGroup.Put("/update/:id",
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.Update)
+		authMiddleware, answerHandler.Update)
+	answerGroup.Get("/:id",
+		// middleware.SetTransaction(database.NewGormCommitter(db)),
+		authMiddleware, answerHandler.GetByID)
 
-	questionGroup.Get("/:id",
+	answerGroup.Delete("/:id",
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.GetByID)
-
-	questionGroup.Delete("/:id",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.Delete)
+		authMiddleware, answerHandler.Delete)
 }

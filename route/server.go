@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"golizilla/config"
+	"golizilla/domain/repository"
 	"golizilla/handler/middleware"
+	"golizilla/service"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -45,12 +47,28 @@ func RunServer(cfg *config.Config, database *gorm.DB) {
 		},
 	}))
 
+	// Initialize repositories
+	questionRepo := repository.NewQuestionRepository(database)
+	questionnariRepo := repository.NewQuestionnaireRepository(database)
+	answerRepo := repository.NewAnswerRepository(database)
+	roleRepo := repository.NewRoleRepository(database)
+	userRepo := repository.NewUserRepository(database)
+	rolePrivilegeRepo := repository.NewRolePrivilegeRepository(database)
+
+	// Initialize services
+	questionService := service.NewQuestionService(questionRepo)
+	questionnariService := service.NewQuestionnaireService(questionnariRepo)
+	roleService := service.NewRoleService(roleRepo, userRepo, rolePrivilegeRepo)
+	authorizationsService := service.NewAuthorizationService(roleService)
+	emailService := service.NewEmailService(cfg)
+	userService := service.NewUserService(userRepo, emailService)
+	answerService := service.NewAnswerService(answerRepo)
+
 	// Setup routes
-	SetupUserRoutes(app, database, cfg)
-
-	setupQuestionnariRoutes(app, database, cfg)
-
-	SetupQuestionRoutes(app, database, cfg)
+	SetupUserRoutes(app, database, cfg, userService, emailService, roleService)
+	SetupQuestionnariRoutes(app, database, cfg, questionnariService, authorizationsService)
+	SetupQuestionRoutes(app, database, cfg, questionService)
+	SetupAnswerRoutes(app, database, cfg, answerService)
 
 	// Start the server
 	host := cfg.Host

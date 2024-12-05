@@ -21,10 +21,11 @@ type Config struct {
 	DBName     string
 	DBPort     int
 
-	MongoDbUsername string
-	MongoDbPassword string
-	MongoDbHost     string
-	MongoDbPort     int
+	MongoDbUsername    string
+	MongoDbPassword    string
+	MongoDbHost        string
+	MongoDbPort        int
+	MongoDbArchivePath string
 
 	EmailSender       string
 	EmailSMTPHost     string
@@ -58,10 +59,11 @@ func LoadConfig() (*Config, error) {
 		DBPort:     getEnvAsInt("DB_PORT", 5432),
 		DBName:     getEnv("DB_NAME", "db"),
 
-		MongoDbUsername: getEnv("MONGODB_USERNAME", "username"),
-		MongoDbPassword: getEnv("MONGODB_PASSWORD", "password123"),
-		MongoDbHost:     getEnv("MONGODB_HOST", "localhost"),
-		MongoDbPort:     getEnvAsInt("MONGODB_PORT", 27107),
+		MongoDbUsername:    getEnv("MONGODB_USERNAME", "username"),
+		MongoDbPassword:    getEnv("MONGODB_PASSWORD", "password123"),
+		MongoDbHost:        getEnv("MONGODB_HOST", "localhost"),
+		MongoDbPort:        getEnvAsInt("MONGODB_PORT", 27107),
+		MongoDbArchivePath: getEnv("MONGODB_ARCHIVE_PATH", "./archive"),
 
 		EmailSender:       getEnv("EMAIL_SENDER", "no-reply@example.com"),
 		EmailSMTPHost:     getEnv("EMAIL_SMTP_HOST", "smtp.example.com"),

@@ -7,6 +7,7 @@ import (
 	"golizilla/handler/middleware"
 	"golizilla/handler/presenter"
 	"golizilla/internal/apperrors"
+	"golizilla/persistence/logger"
 	"golizilla/service"
 	"golizilla/service/utils"
 	"time"
@@ -178,6 +179,10 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to save session")
 	}
 
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: "user_handler",
+		Message: "User logged in successfully",
+	})
 	// If 2FA is not enabled, proceed to generate JWT token
 	return h.generateAndSetToken(c, user)
 }

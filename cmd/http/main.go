@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"golizilla/config"
 	"golizilla/persistence/database"
+	"golizilla/persistence/logger"
 	"golizilla/route"
 
+	"github.com/robfig/cron/v3"
+	"go.uber.org/zap/zapcore"
 	"gorm.io/gorm"
 )
 
@@ -31,6 +35,30 @@ func main() {
 		log.Printf("Failed to assert database to *gorm.DB")
 		return
 	}
+
+	// Initialize the singleton logger
+	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%d", cfg.MongoDbUsername, cfg.MongoDbPassword, cfg.MongoDbHost, cfg.MongoDbPort)
+	if err := logger.Initialize(mongoURI, "logsdb", "logs", zapcore.InfoLevel); err != nil {
+		log.Println("Failed to initialize logger:", err)
+		return
+	}
+
+	// Initialize the cron job
+	c := cron.New()
+	_, err = c.AddFunc("@daily", func() {
+		log.Println("Running archive and delete job...")
+		if err := logger.ArchiveAndDelete(cfg); err != nil {
+			log.Printf("Job failed: %v", err)
+		} else {
+			log.Println("Job completed successfully.")
+		}
+	})
+	if err != nil {
+		log.Fatalf("Failed to schedule job: %v", err)
+	}
+
+	// Start the cron scheduler
+	c.Start()
 
 	// Start API
 	route.RunServer(cfg, gormDB)

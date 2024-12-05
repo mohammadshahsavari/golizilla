@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"golizilla/config"
+	"golizilla/handler/middleware"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -23,6 +24,10 @@ func RunServer(cfg *config.Config, database *gorm.DB) {
 	app.Use(logger.New())
 	app.Use(recover.New())
 	app.Use(cors.New())
+
+	// Add Logging IDs to Context middleware
+	middleware.InitSessionStore(cfg)
+	app.Use(middleware.ContextMiddleware())
 
 	// Add additional middleware for rate limiting
 	app.Use(limiter.New(limiter.Config{

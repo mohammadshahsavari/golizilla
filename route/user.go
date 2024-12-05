@@ -36,13 +36,14 @@ func SetupUserRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	userGroup.Post("/verify-login", middleware.SetTransaction(database.NewGormCommitter(db)), userHandler.VerifyLogin)
 
 	// Initialize the JWT middleware with the config
-	jwtMiddleware := middleware.AuthMiddleware(cfg)
+	userGroup.Use(middleware.AuthMiddleware(cfg))
+	userGroup.Use(middleware.ContextMiddleware())
 
 	// Protected routes
-	userGroup.Get("/profile", middleware.SetTransaction(database.NewGormCommitter(db)), jwtMiddleware, userHandler.GetProfile)
-	userGroup.Put("/profile/update", middleware.SetTransaction(database.NewGormCommitter(db)), jwtMiddleware, userHandler.UpdateProfile)
-	userGroup.Get("/profile/notifications", middleware.SetTransaction(database.NewGormCommitter(db)), jwtMiddleware, userHandler.GetNotificationListList)
-	userGroup.Post("/enable-2fa", middleware.SetTransaction(database.NewGormCommitter(db)), jwtMiddleware, userHandler.Enable2FA)
-	userGroup.Post("/disable-2fa", middleware.SetTransaction(database.NewGormCommitter(db)), jwtMiddleware, userHandler.Disable2FA)
-	userGroup.Post("/logout", middleware.SetTransaction(database.NewGormCommitter(db)), jwtMiddleware, userHandler.Logout)
+	userGroup.Get("/profile", middleware.SetTransaction(database.NewGormCommitter(db)), userHandler.GetProfile)
+	userGroup.Put("/profile/update", middleware.SetTransaction(database.NewGormCommitter(db)), userHandler.UpdateProfile)
+	userGroup.Get("/profile/notifications", middleware.SetTransaction(database.NewGormCommitter(db)), userHandler.GetNotificationListList)
+	userGroup.Post("/enable-2fa", middleware.SetTransaction(database.NewGormCommitter(db)), userHandler.Enable2FA)
+	userGroup.Post("/disable-2fa", middleware.SetTransaction(database.NewGormCommitter(db)), userHandler.Disable2FA)
+	userGroup.Post("/logout", middleware.SetTransaction(database.NewGormCommitter(db)), userHandler.Logout)
 }

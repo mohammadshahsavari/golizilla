@@ -4,8 +4,11 @@ import (
 	"errors"
 	"golizilla/config"
 	"golizilla/domain/model"
+	"golizilla/handler/middleware"
 	"golizilla/handler/presenter"
 	"golizilla/internal/apperrors"
+	"golizilla/internal/logmessages"
+	"golizilla/persistence/logger"
 	privilegeconstants "golizilla/internal/privilegeConstants"
 	"golizilla/service"
 	"golizilla/service/utils"
@@ -182,6 +185,23 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		return presenter.Send(c, fiber.StatusOK, true, "2FA code sent to your email", nil, nil)
 	}
 
+	// Get session and set user ID
+	sess, err := middleware.Store.Get(c)
+	if err != nil {
+		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to create session")
+	}
+
+	sess.Set("user_id", user.ID.String())
+
+	// Save session
+	if err := sess.Save(); err != nil {
+		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to save session")
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserLoginSuccessful,
+	})
 	// If 2FA is not enabled, proceed to generate JWT token
 	return h.generateAndSetToken(c, user)
 }
@@ -221,6 +241,19 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Get session and set user ID
+	sess, err := middleware.Store.Get(c)
+	if err != nil {
+		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to create session")
+	}
+
+	sess.Set("user_id", user.ID.String())
+
+	// Save session
+	if err := sess.Save(); err != nil {
+		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to save session")
+	}
+
 	// Generate JWT token and set cookie
 	return h.generateAndSetToken(c, user)
 }
@@ -237,6 +270,11 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	if err != nil {
 		return h.handleError(c, err)
 	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserGetProfileSuccessful,
+	})
 
 	// Respond with user data
 	return presenter.Send(c, fiber.StatusOK, true, "User profile fetched successfully", presenter.NewUserResponse(user), nil)
@@ -381,7 +419,14 @@ func (h *UserHandler) Logout(c *fiber.Ctx) error {
 		Secure:   h.Config.Env == "production",
 		SameSite: "Strict",
 	})
-
+	c.Cookie(&fiber.Cookie{
+		Name:     "session_id",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour), // Set expiry in the past
+		HTTPOnly: true,
+		Secure:   h.Config.Env == "production",
+		SameSite: "Strict",
+	})
 	return presenter.Send(c, fiber.StatusOK, true, "Logged out successfully", nil, nil)
 }
 

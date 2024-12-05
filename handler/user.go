@@ -9,6 +9,7 @@ import (
 	"golizilla/internal/apperrors"
 	"golizilla/internal/logmessages"
 	"golizilla/persistence/logger"
+	privilegeconstants "golizilla/internal/privilegeConstants"
 	"golizilla/service"
 	"golizilla/service/utils"
 	"time"
@@ -21,13 +22,18 @@ import (
 type UserHandler struct {
 	UserService  service.IUserService
 	EmailService service.IEmailService
+	RoleService  service.IRoleService
 	Config       *config.Config
 }
 
-func NewUserHandler(userService service.IUserService, emailService service.IEmailService, cfg *config.Config) *UserHandler {
+func NewUserHandler(userService service.IUserService,
+	emailService service.IEmailService,
+	roleService service.IRoleService,
+	cfg *config.Config) *UserHandler {
 	return &UserHandler{
 		UserService:  userService,
 		EmailService: emailService,
+		RoleService:  roleService,
 		Config:       cfg,
 	}
 }
@@ -64,6 +70,18 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	role, err := h.RoleService.CreateRole(ctx, user.Username, "Default")
+	if err != nil {
+		c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
+		return h.handleError(c, err)
+	}
+
+	//add more privileges
+	if err := h.RoleService.AddPrivilege(ctx, role.ID, privilegeconstants.CreateQuestionnari); err != nil {
+		c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
+		return h.handleError(c, err)
+	}
+
 	// Send verification email
 	emailData := map[string]interface{}{
 		"Username":         user.Username,
@@ -71,7 +89,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		"Expire":           h.Config.VerificationExpiresIn.Minutes(),
 	}
 
-	err := h.EmailService.SendEmail(ctx,
+	err = h.EmailService.SendEmail(ctx,
 		[]string{user.Email},
 		"Email Verification",
 		"verification.html",

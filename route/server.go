@@ -50,6 +50,8 @@ func RunServer(cfg *config.Config, database *gorm.DB) {
 
 	setupQuestionnariRoutes(app, database, cfg)
 
+	SetupQuestionRoutes(app, database, cfg)
+
 	// Start the server
 	host := cfg.Host
 	port := cfg.Port

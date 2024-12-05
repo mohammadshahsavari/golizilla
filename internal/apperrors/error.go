@@ -21,5 +21,6 @@ var (
 	ErrInvalidTokenClaims      = errors.New("invalid token claims")
 	ErrInvalidUserID           = errors.New("invalid user ID in token")
 	ErrInvalidUserDateOfBirth  = errors.New("invalid user date of birth")
+	ErrLackOfAuthorization     = errors.New("you are not authorized to do this")
 	// Add more as needed
 )

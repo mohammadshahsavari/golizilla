@@ -8,36 +8,36 @@ import (
 	"github.com/google/uuid"
 )
 
-type CreateQuestionnariRequest struct {
-	StartTime      time.Time     `json:"startTime"`
-	EndTime        time.Time     `json:"endTime"`
+type CreateQuestionnaireRequest struct {
+	StartTime      time.Time     `json:"start_time"`
+	EndTime        time.Time     `json:"end_time"`
 	Random         bool          `json:"random"`
-	BackCompatible bool          `json:"backCompatible"`
+	BackCompatible bool          `json:"back_compatible"`
 	Title          string        `json:"title"`
-	AnswerTime     time.Duration `json:"answerTime"`
+	AnswerTime     time.Duration `json:"answer_time"`
 	Anonymous      bool          `json:"anonymous"`
 	//TODO: Questions
 }
 
-type CreateQuestionnariResponseData struct {
+type CreateQuestionnaireResponseData struct {
 	Id uuid.UUID `json:"id"`
 }
 
-type GetQuestionnariResponseData struct {
+type GetQuestionnaireResponseData struct {
 	Id                 uuid.UUID     `json:"id"`
-	OwnerId            uuid.UUID     `json:"ownerId"`
-	CreatedTime        time.Time     `json:"createdTime"`
-	StartTime          time.Time     `json:"startTime"`
-	EndTime            time.Time     `json:"endTime"`
+	OwnerId            uuid.UUID     `json:"owner_id"`
+	CreatedTime        time.Time     `json:"created_time"`
+	StartTime          time.Time     `json:"start_time"`
+	EndTime            time.Time     `json:"end_time"`
 	Random             bool          `json:"random"`
-	BackCompatible     bool          `json:"backCompatible"`
+	BackCompatible     bool          `json:"back_compatible"`
 	Title              string        `json:"title"`
-	AnswerTime         time.Duration `json:"answerTime"`
-	ParticipationCount uint          `json:"particpationCount"`
+	AnswerTime         time.Duration `json:"answer_time"`
+	ParticipationCount uint          `json:"particpation_count"`
 	Anonymous          bool          `json:"anonymous"`
 }
 
-func (req *CreateQuestionnariRequest) Validate() error {
+func (req *CreateQuestionnaireRequest) Validate() error {
 	if req.EndTime.Before(req.StartTime) || req.EndTime.Before(time.Now()) {
 		return errors.New("start and end time is not valid")
 	}
@@ -48,7 +48,7 @@ func (req *CreateQuestionnariRequest) Validate() error {
 	return nil
 }
 
-func (req *CreateQuestionnariRequest) ToDomain() *model.Questionnaire {
+func (req *CreateQuestionnaireRequest) ToDomain() *model.Questionnaire {
 	return &model.Questionnaire{
 		StartTime:      req.StartTime,
 		EndTime:        req.EndTime,
@@ -60,19 +60,19 @@ func (req *CreateQuestionnariRequest) ToDomain() *model.Questionnaire {
 	}
 }
 
-func NewCreateQuestionnariResponse(id uuid.UUID) Response {
+func NewCreateQuestionnaireResponse(id uuid.UUID) Response {
 	return Response{
 		Success: true,
-		Data: CreateQuestionnariResponseData{
+		Data: CreateQuestionnaireResponseData{
 			Id: id,
 		},
 	}
 }
 
-func NewGetQuestionnariResponse(data *model.Questionnaire) Response {
+func NewGetQuestionnaireResponse(data *model.Questionnaire) Response {
 	return Response{
 		Success: true,
-		Data: GetQuestionnariResponseData{
+		Data: GetQuestionnaireResponseData{
 			Id:                 data.Id,
 			OwnerId:            data.OwnerId,
 			CreatedTime:        data.CreatedTime,
@@ -88,11 +88,11 @@ func NewGetQuestionnariResponse(data *model.Questionnaire) Response {
 	}
 }
 
-func NewGetQuestionnariesResponse(data []model.Questionnaire) Response {
-	var resultData []GetQuestionnariResponseData
+func NewGetQuestionnaireesResponse(data []model.Questionnaire) Response {
+	var resultData []GetQuestionnaireResponseData
 
 	for _, item := range data {
-		resultData = append(resultData, GetQuestionnariResponseData{
+		resultData = append(resultData, GetQuestionnaireResponseData{
 			Id:                 item.Id,
 			OwnerId:            item.OwnerId,
 			CreatedTime:        item.CreatedTime,

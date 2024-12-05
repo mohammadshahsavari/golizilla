@@ -10,30 +10,30 @@ import (
 )
 
 type CreateQuestionRequest struct {
-	QuestionnaireId uuid.UUID `json:"questionId"`
-	QuestionText    string    `json:"questionText"`
+	QuestionnaireId uuid.UUID `json:"question_id"`
+	QuestionText    string    `json:"question_text"`
 	Descriptive     bool      `json:"descriptive"`
-	OptionsCount    uint      `json:"optionsCount"`
-	CorrectOption   uint      `json:"correctOption"`
-	MetaDataPath    string    `json:"metaDataPath,omitempty"`
-	OptionsText     string    `json:"optionsText"` // string or []byte ?
+	OptionsCount    uint      `json:"options_count"`
+	CorrectOption   uint      `json:"correct_option"`
+	MetaDataPath    string    `json:"meta_data_path,omitempty"`
+	OptionsText     string    `json:"options_text"` // string or []byte ?
 	// Answers         []*Answer `json:""`
 }
 
 func (req *CreateQuestionRequest) Validate() error {
 	// Validate QuestionnaireId
 	if req.QuestionnaireId == uuid.Nil {
-		return errors.New("questionnaireId cannot be empty")
+		return errors.New("questionnaire id cannot be empty")
 	}
 
 	// Validate QuestionText
 	if strings.TrimSpace(req.QuestionText) == "" {
-		return errors.New("questionText cannot be empty")
+		return errors.New("question text cannot be empty")
 	}
 
 	// Validate CorrectOption
 	if req.CorrectOption > req.OptionsCount {
-		return fmt.Errorf("correctOption must be less or equal than %d", req.OptionsCount)
+		return fmt.Errorf("correct option must be less or equal than %d", req.OptionsCount)
 	}
 
 	// // Validate OptionsText
@@ -78,14 +78,14 @@ func NewCreateQuestionResponse(id uuid.UUID) CreateQuestionResponse {
 
 type GetQuestionResponse struct {
 	ID              uuid.UUID `json:"id"`
-	QuestionnaireId uuid.UUID `json:"questionnaireId"`
+	QuestionnaireId uuid.UUID `json:"questionnaire_id"`
 	Index           uint      `json:"index"`
-	QuestionText    string    `json:"questionText"`
+	QuestionText    string    `json:"question_text"`
 	Descriptive     bool      `json:"descriptive"`
-	OptionsCount    uint      `json:"optionsCount"`
-	CorrectOption   uint      `json:"correctOption"`
-	MetaDataPath    string    `json:"metaDataPath,omitempty"`
-	OptionsText     string    `json:"optionsText"`
+	OptionsCount    uint      `json:"options_count"`
+	CorrectOption   uint      `json:"correct_option"`
+	MetaDataPath    string    `json:"meta_data_path,omitempty"`
+	OptionsText     string    `json:"options_text"`
 	// Answers         []*Answer
 }
 
@@ -104,23 +104,23 @@ func NewGetQuestionResponse(q *model.Question) *GetQuestionResponse {
 }
 
 type UpdateQuestionRequest struct {
-	QuestionText  string `json:"questionText"`
+	QuestionText  string `json:"question_text"`
 	Descriptive   bool   `json:"descriptive"`
-	OptionsCount  uint   `json:"optionsCount"`
-	CorrectOption uint   `json:"correctOption"`
-	MetaDataPath  string `json:"metaDataPath"`
-	OptionsText   string `json:"optionsText"`
+	OptionsCount  uint   `json:"options_count"`
+	CorrectOption uint   `json:"correct_option"`
+	MetaDataPath  string `json:"meta_data_path"`
+	OptionsText   string `json:"options_text"`
 }
 
 func (req *UpdateQuestionRequest) Validate() error {
 	// Validate QuestionText
 	if strings.TrimSpace(req.QuestionText) == "" {
-		return errors.New("questionText cannot be empty")
+		return errors.New("question text cannot be empty")
 	}
 
 	// Validate CorrectOption
 	if req.CorrectOption > req.OptionsCount {
-		return fmt.Errorf("correctOption must be less or equal than %d", req.OptionsCount)
+		return fmt.Errorf("correct option must be less or equal than %d", req.OptionsCount)
 	}
 
 	// // Validate OptionsText

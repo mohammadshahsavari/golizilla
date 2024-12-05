@@ -12,36 +12,36 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupQuestionnariRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, questionnariService service.IQuestionnaireService, authorizationService service.IAuthorizationService) {
-	questionnariGroup := app.Group("/questionnari")
+func SetupQuestionnaireRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, questionnaireService service.IQuestionnaireService, authorizationService service.IAuthorizationService) {
+	questionnaireGroup := app.Group("/questionnaire")
 
-	questionnariHandler := handler.NewQuestionnariHandler(questionnariService)
+	questionnaireHandler := handler.NewQuestionnaireHandler(questionnaireService)
 
 	authMiddleware := middleware.AuthMiddleware(cfg)
 	authorizationMiddleware := middleware.AuthorizationMiddleware(authorizationService)
 	headerAuthMiddleware := middleware.HeaderAuthMiddleware(cfg)
 
-	questionnariGroup.Post("/",
+	questionnaireGroup.Post("/",
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, authorizationMiddleware(privilegeconstants.CreateQuestionnari), questionnariHandler.Create)
+		authMiddleware, authorizationMiddleware(privilegeconstants.CreateQuestionnaire), questionnaireHandler.Create)
 
-	questionnariGroup.Get("/:id",
+	questionnaireGroup.Get("/:id",
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionnariHandler.GetById)
+		authMiddleware, questionnaireHandler.GetById)
 
-	questionnariGroup.Get("/ownerId/:id",
+	questionnaireGroup.Get("/ownerId/:id",
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionnariHandler.GetByOwnerId)
+		authMiddleware, questionnaireHandler.GetByOwnerId)
 
-	questionnariGroup.Post("/update",
+	questionnaireGroup.Post("/update",
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionnariHandler.Update)
+		authMiddleware, questionnaireHandler.Update)
 
-	questionnariGroup.Delete("/:id",
+	questionnaireGroup.Delete("/:id",
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionnariHandler.Delete)
+		authMiddleware, questionnaireHandler.Delete)
 
-	questionnariGroup.Get("/GetResults/:id",
+	questionnaireGroup.Get("/GetResults/:id",
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		headerAuthMiddleware, websocket.New(questionnariHandler.GetResults))
+		headerAuthMiddleware, websocket.New(questionnaireHandler.GetResults))
 }

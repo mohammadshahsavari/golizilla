@@ -8,6 +8,7 @@ import (
 type Answer struct {
 	ID           uuid.UUID `gorm:"type:uuid;primary_key;"`
 	QuestionID   uuid.UUID `gorm:"not null"`
+	UserID       uuid.UUID `gorm:"not null"`
 	Answer       string
 	AnswerOption uint
 	//answer time can be added

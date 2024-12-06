@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"golizilla/domain/model"
 
 	"github.com/google/uuid"
@@ -55,9 +56,16 @@ func (r *rolePrivilege) GetRolePrivileges(ctx context.Context, roleId uuid.UUID)
 
 func (r *rolePrivilege) GetRolePrivilegesByPrivileges(ctx context.Context, roleId uuid.UUID, privileges ...string) ([]model.RolePrivilege, error) {
 	var rolePrivileges []model.RolePrivilege
-	err := r.db.WithContext(ctx).Where("role_id = ? And privilege_id IN privileges", roleId).Find(&rolePrivileges).Error
+	if len(privileges) == 0 {
+		return nil, fmt.Errorf("privilegeIds cannot be empty")
+	}
+	// Query matching both role_id and privilege_id
+	err := r.db.WithContext(ctx).Where("role_id = ? AND privilege_id IN ?", roleId, privileges).Find(&rolePrivileges).Error
+
 	if err != nil {
-		//log
+		// Log the error if necessary
+		// log.Printf("Error fetching role privileges: %v", err)
+		return nil, err
 	}
 
 	return rolePrivileges, err

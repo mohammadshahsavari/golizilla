@@ -7,7 +7,7 @@ import (
 )
 
 type IAuthorizationService interface {
-	IsAuthorized(ctx context.Context, userId uuid.UUID, requirePrivileges ...string) (bool, error)
+	IsAuthorized(ctx context.Context, cuserCtx context.Context, userId uuid.UUID, requirePrivileges ...string) (bool, error)
 }
 
 type authorizationService struct {
@@ -20,6 +20,6 @@ func NewAuthorizationService(roleService IRoleService) IAuthorizationService {
 	}
 }
 
-func (s *authorizationService) IsAuthorized(ctx context.Context, userId uuid.UUID, requirePrivileges ...string) (bool, error) {
-	return s.roleService.HasPrivileges(ctx, userId, requirePrivileges...)
+func (s *authorizationService) IsAuthorized(ctx context.Context, cuserCtx context.Context, userId uuid.UUID, requirePrivileges ...string) (bool, error) {
+	return s.roleService.HasPrivileges(ctx, cuserCtx, userId, requirePrivileges...)
 }

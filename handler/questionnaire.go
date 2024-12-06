@@ -53,7 +53,7 @@ func (q *QuestionnaireHandler) Create(c *fiber.Ctx) error {
 
 	userModel := request.ToDomain()
 	userModel.OwnerId = c.Locals("user_id").(uuid.UUID)
-	id, err := q.questionnaireService.Create(ctx, userModel)
+	id, err := q.questionnaireService.Create(ctx, c.UserContext(), userModel)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
@@ -95,7 +95,7 @@ func (q *QuestionnaireHandler) Delete(c *fiber.Ctx) error {
 		})
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	err = q.questionnaireService.Delete(ctx, id)
+	err = q.questionnaireService.Delete(ctx, c.UserContext(), id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -169,7 +169,7 @@ func (q *QuestionnaireHandler) Update(c *fiber.Ctx) error {
 	// Map fields to update
 	updateFields := request.ToDomain()
 
-	if err := q.questionnaireService.Update(ctx, request.ID, updateFields); err != nil {
+	if err := q.questionnaireService.Update(ctx, c.UserContext(), request.ID, updateFields); err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
 			Message: err.Error(),
@@ -210,7 +210,7 @@ func (q *QuestionnaireHandler) GetById(c *fiber.Ctx) error {
 		})
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	questionnaire, err := q.questionnaireService.GetById(ctx, id)
+	questionnaire, err := q.questionnaireService.GetById(ctx, c.UserContext(), id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -260,7 +260,7 @@ func (q *QuestionnaireHandler) GetByOwnerId(c *fiber.Ctx) error {
 		})
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	questionnaires, err := q.questionnaireService.GetByOwnerId(ctx, id)
+	questionnaires, err := q.questionnaireService.GetByOwnerId(ctx, c.UserContext(), id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -303,7 +303,7 @@ func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {
 		c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
 		return
 	}
-	_, err = q.questionnaireService.GetById(context.Background(), id)
+	_, err = q.questionnaireService.GetById(context.Background(), nil, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -324,7 +324,7 @@ func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {
 
 	var lastValue uint = 0
 	for {
-		questionnaire, err := q.questionnaireService.GetById(context.Background(), id)
+		questionnaire, err := q.questionnaireService.GetById(context.Background(), nil, id)
 		if err != nil {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogQuestionnaireHandler,

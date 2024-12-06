@@ -40,6 +40,7 @@ func NewUserHandler(userService service.IUserService,
 
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	ctx := c.Context()
+	userCtx := c.UserContext()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
 		Service: logmessages.LogUserHandler,
@@ -74,7 +75,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	user.EmailVerificationExpiry = time.Now().Add(h.Config.VerificationExpiresIn)
 	user.IsActive = false // Ensure the user is inactive until email is verified
 
-	role, err := h.RoleService.CreateRole(ctx, user.Username, "Default")
+	role, err := h.RoleService.CreateRole(ctx, userCtx, user.Username, "Default")
 	if err != nil {
 		// c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -85,7 +86,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	//add more privileges
-	if err := h.RoleService.AddPrivilege(ctx, role.ID, privilegeconstants.CreateQuestionnaire); err != nil {
+	if err := h.RoleService.AddPrivilege(ctx, userCtx, role.ID, privilegeconstants.CreateQuestionnaire); err != nil {
 		// c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -96,7 +97,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 
 	// Attempt to save the user
 	user.RoleId = role.ID
-	if err := h.UserService.CreateUser(ctx, user); err != nil {
+	if err := h.UserService.CreateUser(ctx, userCtx, user); err != nil {
 		// Handle errors as before
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			logger.GetLogger().LogWarningFromContext(ctx, logger.LogFields{
@@ -121,6 +122,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	err = h.EmailService.SendEmail(ctx,
+		userCtx,
 		[]string{user.Email},
 		"Email Verification",
 		"verification.html",
@@ -155,6 +157,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 
 func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
 	ctx := c.Context()
+	userCtx := c.UserContext()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
 		Service: logmessages.LogUserHandler,
@@ -181,7 +184,7 @@ func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
 	}
 
 	// Attempt to verify the user's email
-	err := h.UserService.VerifyEmail(ctx, request.Email, request.Code)
+	err := h.UserService.VerifyEmail(ctx, userCtx, request.Email, request.Code)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -210,6 +213,7 @@ func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
 
 func (h *UserHandler) Login(c *fiber.Ctx) error {
 	ctx := c.Context()
+	userCtx := c.UserContext()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
 		Service: logmessages.LogUserHandler,
@@ -236,7 +240,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	}
 
 	// Authenticate the user
-	user, err := h.UserService.AuthenticateUser(ctx, request.Email, request.Password)
+	user, err := h.UserService.AuthenticateUser(ctx, userCtx, request.Email, request.Password)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -262,7 +266,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		user.TwoFACodeExpiry = time.Now().Add(h.Config.TwoFAExpiresIn)
 
 		// Update user in the database
-		if err := h.UserService.UpdateUser(ctx, user); err != nil {
+		if err := h.UserService.UpdateUser(ctx, userCtx, user); err != nil {
 			// c.Context().Logger().Printf("[Login] Failed to update user for 2FA: %v", err)
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogUserHandler,
@@ -279,6 +283,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		}
 
 		err = h.EmailService.SendEmail(ctx,
+			userCtx,
 			[]string{user.Email},
 			"Your 2FA Code",
 			"2fa.html",
@@ -337,6 +342,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 
 func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 	ctx := c.Context()
+	userCtx := c.UserContext()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
 		Service: logmessages.LogUserHandler,
@@ -363,7 +369,7 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 	}
 
 	// Find the user by email
-	user, err := h.UserService.GetUserByEmail(ctx, request.Email)
+	user, err := h.UserService.GetUserByEmail(ctx, userCtx, request.Email)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -387,7 +393,7 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 	user.TwoFACodeExpiry = time.Time{}
 
 	// Update user in the database
-	if err := h.UserService.UpdateUser(ctx, user); err != nil {
+	if err := h.UserService.UpdateUser(ctx, userCtx, user); err != nil {
 		// c.Context().Logger().Printf("[VerifyLogin] Failed to update user: %v", err)
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -437,6 +443,7 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 
 func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	ctx := c.Context()
+	userCtx := c.UserContext()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
 		Service: logmessages.LogUserHandler,
@@ -453,7 +460,7 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	}
 
 	// Fetch user details
-	user, err := h.UserService.GetUserByID(ctx, userID)
+	user, err := h.UserService.GetUserByID(ctx, userCtx, userID)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -482,6 +489,7 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 
 func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 	ctx := c.Context()
+	userCtx := c.UserContext()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
 		Service: logmessages.LogUserHandler,
@@ -517,7 +525,7 @@ func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 	user := request.ToDomain()
 	user.ID = userID
 
-	err := h.UserService.UpdateProfile(ctx, user)
+	err := h.UserService.UpdateProfile(ctx, userCtx, user)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -561,7 +569,7 @@ func (h *UserHandler) GetNotificationListList(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
 	}
 
-	notifList, err := h.UserService.GetNotificationList(ctx, userID)
+	notifList, err := h.UserService.GetNotificationList(ctx, c.UserContext(), userID)
 	if err != nil {
 		// c.Context().Logger().Printf("[GetNotifications] Internal error: %v", err)
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -606,7 +614,7 @@ func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
 	}
 
 	// Attempt to fetch the user
-	user, err := h.UserService.GetUserByID(ctx, id)
+	user, err := h.UserService.GetUserByID(ctx, c.UserContext(), id)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -682,6 +690,7 @@ func (h *UserHandler) generateAndSetToken(c *fiber.Ctx, user *model.User) error 
 
 func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
 	ctx := c.Context()
+	userCtx := c.UserContext()
 	userID := c.Locals("user_id").(uuid.UUID)
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
@@ -690,7 +699,7 @@ func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
 	})
 
 	// Fetch user details
-	user, err := h.UserService.GetUserByID(ctx, userID)
+	user, err := h.UserService.GetUserByID(ctx, userCtx, userID)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -703,7 +712,7 @@ func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
 	user.IsTwoFAEnabled = true
 
 	// Update user in the database
-	if err := h.UserService.UpdateUser(ctx, user); err != nil {
+	if err := h.UserService.UpdateUser(ctx, userCtx, user); err != nil {
 		// c.Context().Logger().Printf("[Enable2FA] Failed to update user: %v", err)
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -731,6 +740,7 @@ func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
 
 func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
 	ctx := c.Context()
+	userCtx := c.UserContext()
 	userID := c.Locals("user_id").(uuid.UUID)
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
@@ -739,7 +749,7 @@ func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
 	})
 
 	// Fetch user details
-	user, err := h.UserService.GetUserByID(ctx, userID)
+	user, err := h.UserService.GetUserByID(ctx, userCtx, userID)
 	if err != nil {
 		// c.Context().Logger().Printf("[Disable2FA] Internal error: %v", err)
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -753,7 +763,7 @@ func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
 	user.IsTwoFAEnabled = false
 
 	// Update user in the database
-	if err := h.UserService.UpdateUser(ctx, user); err != nil {
+	if err := h.UserService.UpdateUser(ctx, userCtx, user); err != nil {
 		// c.Context().Logger().Printf("[Disable2FA] Failed to update user: %v", err)
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,

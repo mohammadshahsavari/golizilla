@@ -4,16 +4,17 @@ import (
 	"context"
 	"fmt"
 	"golizilla/domain/model"
+	myContext "golizilla/handler/context"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type IQuestionRepository interface {
-	Create(ctx context.Context, question *model.Question) (uuid.UUID, error)
-	Update(ctx context.Context, question *model.Question) error
-	Delete(ctx context.Context, id uuid.UUID) error
-	GetByID(ctx context.Context, id uuid.UUID) (*model.Question, error)
+	Create(ctx context.Context, userCtx context.Context, question *model.Question) (uuid.UUID, error)
+	Update(ctx context.Context, userCtx context.Context, question *model.Question) error
+	Delete(ctx context.Context, userCtx context.Context, id uuid.UUID) error
+	GetByID(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Question, error)
 }
 
 type QuestionRepository struct {
@@ -26,25 +27,41 @@ func NewQuestionRepository(db *gorm.DB) IQuestionRepository {
 	}
 }
 
-func (r *QuestionRepository) Create(ctx context.Context, question *model.Question) (uuid.UUID, error) {
-	result := r.db.WithContext(ctx).Create(question)
+func (r *QuestionRepository) Create(ctx context.Context, userCtx context.Context, question *model.Question) (uuid.UUID, error) {
+	var db *gorm.DB
+	if db = myContext.GetDB(userCtx); db == nil {
+		db = r.db
+	}
+	result := db.WithContext(ctx).Create(question)
 	if result.Error != nil {
 		return uuid.Nil, fmt.Errorf("failed to create question: %w", result.Error)
 	}
 	return question.ID, nil
 }
 
-func (r *QuestionRepository) Update(ctx context.Context, question *model.Question) error {
-	return r.db.WithContext(ctx).Where("id = ?", question.ID).Updates(question).Error
+func (r *QuestionRepository) Update(ctx context.Context, userCtx context.Context, question *model.Question) error {
+	var db *gorm.DB
+	if db = myContext.GetDB(userCtx); db == nil {
+		db = r.db
+	}
+	return db.WithContext(ctx).Where("id = ?", question.ID).Updates(question).Error
 }
 
-func (r *QuestionRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Delete(&model.Question{}, id).Error
+func (r *QuestionRepository) Delete(ctx context.Context, userCtx context.Context, id uuid.UUID) error {
+	var db *gorm.DB
+	if db = myContext.GetDB(userCtx); db == nil {
+		db = r.db
+	}
+	return db.WithContext(ctx).Delete(&model.Question{}, id).Error
 }
 
-func (r *QuestionRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Question, error) {
+func (r *QuestionRepository) GetByID(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Question, error) {
+	var db *gorm.DB
+	if db = myContext.GetDB(userCtx); db == nil {
+		db = r.db
+	}
 	var question model.Question
-	err := r.db.WithContext(ctx).Where("id = ?", id).First(&question).Error
+	err := db.WithContext(ctx).Where("id = ?", id).First(&question).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to find question by ID: %v, %w", id, err)
 	}

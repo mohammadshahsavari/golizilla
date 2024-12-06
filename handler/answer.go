@@ -61,7 +61,7 @@ func (h *AnswerHandler) Create(c *fiber.Ctx) error {
 
 	Answer := request.ToDomain()
 
-	id, err := h.answerService.Create(ctx, Answer)
+	id, err := h.answerService.Create(ctx, c.UserContext(), Answer)
 	if err != nil {
 		// log
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -149,7 +149,7 @@ func (h *AnswerHandler) Update(c *fiber.Ctx) error {
 	Answer := request.ToDomain()
 	Answer.ID = id
 
-	err = h.answerService.Update(ctx, Answer)
+	err = h.answerService.Update(ctx, c.UserContext(), Answer)
 	if err != nil {
 		// log
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -212,7 +212,7 @@ func (h *AnswerHandler) Delete(c *fiber.Ctx) error {
 		)
 	}
 
-	err = h.answerService.Delete(ctx, id)
+	err = h.answerService.Delete(ctx, c.UserContext(), id)
 	if err != nil {
 		// log
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -276,9 +276,9 @@ func (h *AnswerHandler) GetByID(c *fiber.Ctx) error {
 		)
 	}
 
-	Answer, err := h.answerService.GetByID(ctx, id)
+	Answer, err := h.answerService.GetByID(ctx, c.UserContext(), id)
 	if err != nil {
-		// log 
+		// log
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogAnswerHandler,
 			Message: err.Error(),

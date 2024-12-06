@@ -40,14 +40,28 @@ func NewUserHandler(userService service.IUserService,
 
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserCreateBegin,
+	})
+
 	// Parse request body into CreateUserRequest
 	var request presenter.CreateUserRequest
 	if err := c.BodyParser(&request); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
 
 	// Validate the request
 	if err := request.Validate(); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
@@ -62,13 +76,21 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 
 	role, err := h.RoleService.CreateRole(ctx, user.Username, "Default")
 	if err != nil {
-		c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
+		// c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
 	//add more privileges
 	if err := h.RoleService.AddPrivilege(ctx, role.ID, privilegeconstants.CreateQuestionnaire); err != nil {
-		c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
+		// c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
@@ -77,9 +99,17 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	if err := h.UserService.CreateUser(ctx, user); err != nil {
 		// Handle errors as before
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+			logger.GetLogger().LogWarningFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogUserHandler,
+				Message: apperrors.ErrEmailAlreadyExists.Error(),
+			})
 			return presenter.SendError(c, fiber.StatusConflict, apperrors.ErrEmailAlreadyExists.Error())
 		}
-		c.Context().Logger().Printf("[CreateUser] Internal error: %v", err)
+		// c.Context().Logger().Printf("[CreateUser] Internal error: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
@@ -97,58 +127,130 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		emailData,
 	)
 	if err != nil {
-		c.Context().Logger().Printf("[CreateUser] Failed to send verification email: %v", err)
+		// c.Context().Logger().Printf("[CreateUser] Failed to send verification email: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, apperrors.ErrFailedToSendEmail)
 	}
 
 	// Respond with a message indicating that verification is required
-	return presenter.Send(c, fiber.StatusCreated, true, "User created successfully. Please verify your email.", nil, nil)
+	err = presenter.Send(c, fiber.StatusCreated, true, "User created successfully. Please verify your email.", nil, nil)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserCreateSuccessful,
+	})
+
+	return nil
 }
 
 func (h *UserHandler) VerifySignup(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserVerifySignupBegin,
+	})
+
 	// Parse request body
 	var request presenter.VerifyEmailRequest
 	if err := c.BodyParser(&request); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
 
 	// Validate the request
 	if err := request.Validate(); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	// Attempt to verify the user's email
 	err := h.UserService.VerifyEmail(ctx, request.Email, request.Code)
 	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
 	// Respond with success
-	return presenter.Send(c, fiber.StatusOK, true, "Email verified successfully", nil, nil)
+	err = presenter.Send(c, fiber.StatusOK, true, "Email verified successfully", nil, nil)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserVerifySignupSuccessful,
+	})
+
+	return nil
 }
 
 func (h *UserHandler) Login(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserLoginBegin,
+	})
+
 	// Parse request body into LoginRequest
 	var request presenter.LoginRequest
 	if err := c.BodyParser(&request); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
 
 	// Validate the request
 	if err := request.Validate(); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	// Authenticate the user
 	user, err := h.UserService.AuthenticateUser(ctx, request.Email, request.Password)
 	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
 	// Check if user is active
 	if !user.IsActive {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: apperrors.ErrAccountLocked.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusForbidden, apperrors.ErrAccountLocked.Error())
 	}
 
@@ -161,7 +263,11 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 
 		// Update user in the database
 		if err := h.UserService.UpdateUser(ctx, user); err != nil {
-			c.Context().Logger().Printf("[Login] Failed to update user for 2FA: %v", err)
+			// c.Context().Logger().Printf("[Login] Failed to update user for 2FA: %v", err)
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogUserHandler,
+				Message: err.Error(),
+			})
 			return h.handleError(c, err)
 		}
 
@@ -179,6 +285,10 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 			emailData,
 		)
 		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogUserHandler,
+				Message: err.Error(),
+			})
 			return h.handleError(c, err)
 		}
 
@@ -189,6 +299,10 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	// Get session and set user ID
 	sess, err := middleware.Store.Get(c)
 	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to create session")
 	}
 
@@ -196,39 +310,75 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 
 	// Save session
 	if err := sess.Save(); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to save session")
+	}
+
+	// If 2FA is not enabled, proceed to generate JWT token
+	err = h.generateAndSetToken(c, user)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
 	}
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
 		Service: logmessages.LogUserHandler,
 		Message: logmessages.LogUserLoginSuccessful,
 	})
-	// If 2FA is not enabled, proceed to generate JWT token
-	return h.generateAndSetToken(c, user)
+
+	return nil
 }
 
 func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserVerifyLoginBegin,
+	})
+
 	// Parse request body into Verify2FARequest
 	var request presenter.Verify2FARequest
 	if err := c.BodyParser(&request); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
 
 	// Validate the request
 	if err := request.Validate(); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	// Find the user by email
 	user, err := h.UserService.GetUserByEmail(ctx, request.Email)
 	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
 	// Check if 2FA code matches and hasn't expired
 	if user.TwoFACode != request.Code || time.Now().After(user.TwoFACodeExpiry) {
 		err := apperrors.ErrInvalidTwoFACode
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
@@ -238,13 +388,21 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 
 	// Update user in the database
 	if err := h.UserService.UpdateUser(ctx, user); err != nil {
-		c.Context().Logger().Printf("[VerifyLogin] Failed to update user: %v", err)
+		// c.Context().Logger().Printf("[VerifyLogin] Failed to update user: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
 	// Get session and set user ID
 	sess, err := middleware.Store.Get(c)
 	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to create session")
 	}
 
@@ -252,24 +410,66 @@ func (h *UserHandler) VerifyLogin(c *fiber.Ctx) error {
 
 	// Save session
 	if err := sess.Save(); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusInternalServerError, "Failed to save session")
 	}
 
 	// Generate JWT token and set cookie
-	return h.generateAndSetToken(c, user)
+	err = h.generateAndSetToken(c, user)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserVerifyLoginSuccessful,
+	})
+
+	return nil
 }
 
 func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserGetProfileBegin,
+	})
+
 	userID, ok := c.Locals("user_id").(uuid.UUID)
 	if !ok {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: apperrors.ErrInvalidUserID.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
 	}
 
 	// Fetch user details
 	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
+	}
+
+	// Respond with user data
+	err = presenter.Send(c, fiber.StatusOK, true, "User profile fetched successfully", presenter.NewUserResponse(user), nil)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
 	}
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
@@ -277,24 +477,40 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 		Message: logmessages.LogUserGetProfileSuccessful,
 	})
 
-	// Respond with user data
-	return presenter.Send(c, fiber.StatusOK, true, "User profile fetched successfully", presenter.NewUserResponse(user), nil)
+	return nil
 }
 
 func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 	ctx := c.Context()
 
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserUpdateProfileBegin,
+	})
+
 	var request presenter.UpdateProfileRequest
 	if err := c.BodyParser(&request); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
 
 	if err := request.Validate(); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidUserDateOfBirth.Error())
 	}
 
 	userID, ok := c.Locals("user_id").(uuid.UUID)
 	if !ok {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: apperrors.ErrInvalidUserID.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
 	}
 
@@ -303,51 +519,136 @@ func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 
 	err := h.UserService.UpdateProfile(ctx, user)
 	if err != nil {
-		c.Context().Logger().Printf("[UpdateProfile] Internal error: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		// c.Context().Logger().Printf("[UpdateProfile] Internal error: %v", err)
 		return h.handleError(c, err)
 	}
 
-	return presenter.Send(c, fiber.StatusOK, true, "user profile updated successfully", presenter.NewUserResponse(user), nil)
+	err = presenter.Send(c, fiber.StatusOK, true, "user profile updated successfully", presenter.NewUserResponse(user), nil)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserUpdateProfileSuccessful,
+	})
+
+	return nil
 }
 
 func (h *UserHandler) GetNotificationListList(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserGetNotificationListBegin,
+	})
+
 	userID, ok := c.Locals("user_id").(uuid.UUID)
 	if !ok {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: apperrors.ErrInvalidUserID.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
 	}
 
-	notifList, err := h.UserService.GetNotificationList(ctx, userID) // *
+	notifList, err := h.UserService.GetNotificationList(ctx, userID)
 	if err != nil {
-		c.Context().Logger().Printf("[GetNotifications] Internal error: %v", err)
+		// c.Context().Logger().Printf("[GetNotifications] Internal error: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
-	return presenter.Send(c, fiber.StatusOK, true, "user notifications successfully fetched", notifList, nil)
+	err = presenter.Send(c, fiber.StatusOK, true, "user notifications successfully fetched", notifList, nil)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserGetNotificationListSuccessful,
+	})
+
+	return nil
 }
 
 func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserGetUserByIDBegin,
+	})
+
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidUserID.Error())
 	}
 
 	// Attempt to fetch the user
 	user, err := h.UserService.GetUserByID(ctx, id)
 	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
 	// Respond with the fetched user
-	return presenter.Send(c, fiber.StatusOK, true, "User fetched successfully", presenter.NewUserResponse(user), nil)
+	err = presenter.Send(c, fiber.StatusOK, true, "User fetched successfully", presenter.NewUserResponse(user), nil)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserGetUserByIDSuccessful,
+	})
+
+	return nil
 }
 
 func (h *UserHandler) generateAndSetToken(c *fiber.Ctx, user *model.User) error {
+	ctx := c.Context()
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserGenerateAndSetJWTTokenBegin,
+	})
+
 	// Generate JWT token
 	tokenString, err := utils.GenerateJWT(user.ID, h.Config.JWTSecretKey, h.Config.JWTExpiresIn)
 	if err != nil {
-		c.Context().Logger().Printf("[generateAndSetToken] Failed to generate JWT: %v", err)
+		// c.Context().Logger().Printf("[generateAndSetToken] Failed to generate JWT: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, apperrors.ErrFailedToGenerateToken)
 	}
 
@@ -362,16 +663,39 @@ func (h *UserHandler) generateAndSetToken(c *fiber.Ctx, user *model.User) error 
 	})
 
 	// Respond with success
-	return presenter.Send(c, fiber.StatusOK, true, "Login successful", nil, nil)
+	err = presenter.Send(c, fiber.StatusOK, true, "Login successful", nil, nil)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserGenerateAndSetJWTTokenSuccessful,
+	})
+
+	return nil
 }
 
 func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
 	ctx := c.Context()
 	userID := c.Locals("user_id").(uuid.UUID)
 
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserEnable2FABegin,
+	})
+
 	// Fetch user details
 	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
@@ -380,21 +704,48 @@ func (h *UserHandler) Enable2FA(c *fiber.Ctx) error {
 
 	// Update user in the database
 	if err := h.UserService.UpdateUser(ctx, user); err != nil {
-		c.Context().Logger().Printf("[Enable2FA] Failed to update user: %v", err)
+		// c.Context().Logger().Printf("[Enable2FA] Failed to update user: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
-	return presenter.Send(c, fiber.StatusOK, true, "Two-factor authentication enabled", nil, nil)
+	err = presenter.Send(c, fiber.StatusOK, true, "Two-factor authentication enabled", nil, nil)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserEnable2FASuccessful,
+	})
+
+	return nil
 }
 
 func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
 	ctx := c.Context()
 	userID := c.Locals("user_id").(uuid.UUID)
 
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserDisable2FABegin,
+	})
+
 	// Fetch user details
 	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
-		c.Context().Logger().Printf("[Disable2FA] Internal error: %v", err)
+		// c.Context().Logger().Printf("[Disable2FA] Internal error: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
@@ -403,14 +754,39 @@ func (h *UserHandler) Disable2FA(c *fiber.Ctx) error {
 
 	// Update user in the database
 	if err := h.UserService.UpdateUser(ctx, user); err != nil {
-		c.Context().Logger().Printf("[Disable2FA] Failed to update user: %v", err)
+		// c.Context().Logger().Printf("[Disable2FA] Failed to update user: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
 		return h.handleError(c, err)
 	}
 
-	return presenter.Send(c, fiber.StatusOK, true, "Two-factor authentication disabled", nil, nil)
+	err = presenter.Send(c, fiber.StatusOK, true, "Two-factor authentication disabled", nil, nil)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserDisable2FASuccessful,
+	})
+
+	return nil
 }
 
 func (h *UserHandler) Logout(c *fiber.Ctx) error {
+	ctx := c.Context()
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserLogoutBegin,
+	})
+
 	// Clear the auth_token cookie
 	c.Cookie(&fiber.Cookie{
 		Name:     "auth_token",
@@ -428,7 +804,22 @@ func (h *UserHandler) Logout(c *fiber.Ctx) error {
 		Secure:   h.Config.Env == "production",
 		SameSite: "Strict",
 	})
-	return presenter.Send(c, fiber.StatusOK, true, "Logged out successfully", nil, nil)
+
+	err := presenter.Send(c, fiber.StatusOK, true, "Logged out successfully", nil, nil)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return err
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserHandler,
+		Message: logmessages.LogUserLogoutBegin,
+	})
+
+	return nil
 }
 
 func (h *UserHandler) handleError(c *fiber.Ctx, err error) error {

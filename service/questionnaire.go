@@ -11,7 +11,7 @@ import (
 type IQuestionnaireService interface {
 	Create(ctx context.Context, questionnaire *model.Questionnaire) (uuid.UUID, error)
 	Delete(ctx context.Context, id uuid.UUID) error
-	Update(ctx context.Context, questionnaire *model.Questionnaire) error
+	Update(ctx context.Context, id uuid.UUID, questionnaire map[string]interface{}) error
 	GetById(ctx context.Context, id uuid.UUID) (*model.Questionnaire, error)
 	GetByOwnerId(ctx context.Context, ownerId uuid.UUID) ([]model.Questionnaire, error)
 }
@@ -41,8 +41,8 @@ func (q *questionnaireService) Delete(ctx context.Context, id uuid.UUID) error {
 	return q.repo.Delete(ctx, id)
 }
 
-func (q *questionnaireService) Update(ctx context.Context, questionnaire *model.Questionnaire) error {
-	return q.repo.Update(ctx, questionnaire)
+func (q *questionnaireService) Update(ctx context.Context, id uuid.UUID, updateFields map[string]interface{}) error {
+	return q.repo.Update(ctx, id, updateFields)
 }
 
 func (q *questionnaireService) GetById(ctx context.Context, id uuid.UUID) (*model.Questionnaire, error) {

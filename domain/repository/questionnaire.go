@@ -11,7 +11,7 @@ import (
 type IQuestionnaireRepository interface {
 	Add(ctx context.Context, questionnaire *model.Questionnaire) error
 	Delete(ctx context.Context, id uuid.UUID) error
-	Update(ctx context.Context, questionnaire *model.Questionnaire) error
+	Update(ctx context.Context, id uuid.UUID, questionnaire map[string]interface{}) error
 	GetById(ctx context.Context, id uuid.UUID) (*model.Questionnaire, error)
 	GetByOwnerId(ctx context.Context, ownerId uuid.UUID) ([]model.Questionnaire, error)
 }
@@ -42,12 +42,12 @@ func (r *questionnaireRepository) Delete(ctx context.Context, id uuid.UUID) erro
 	return err
 }
 
-func (r *questionnaireRepository) Update(ctx context.Context, questionnaire *model.Questionnaire) error {
-	err := r.db.WithContext(ctx).Save(questionnaire).Error
+func (r *questionnaireRepository) Update(ctx context.Context, id uuid.UUID, questionnaire map[string]interface{}) error {
+	err := r.db.WithContext(ctx).Model(&model.Questionnaire{}).Where("id = ?", id).Updates(questionnaire).Error
 	if err != nil {
-		//log
+		return err
 	}
-	return err
+	return nil
 }
 
 func (r *questionnaireRepository) GetById(ctx context.Context, id uuid.UUID) (*model.Questionnaire, error) {
@@ -62,7 +62,7 @@ func (r *questionnaireRepository) GetById(ctx context.Context, id uuid.UUID) (*m
 
 func (r *questionnaireRepository) GetByOwnerId(ctx context.Context, ownerId uuid.UUID) ([]model.Questionnaire, error) {
 	var questionnaires []model.Questionnaire
-	err := r.db.WithContext(ctx).Where("owner_id = ?", ownerId).Find(&questionnaires, ownerId).Error
+	err := r.db.WithContext(ctx).Where("owner_id = ?", ownerId).Find(&questionnaires).Error
 	if err != nil {
 		//log
 	}

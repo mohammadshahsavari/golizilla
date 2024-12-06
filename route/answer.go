@@ -17,7 +17,7 @@ func SetupAnswerRoutes(
 	answerService service.IAnswerService,
 ) {
 	// Create a group for user routes
-	answerGroup := app.Group("/answers")
+	answerGroup := app.Group("/answer")
 
 	// Initialize handlers
 	answerHandler := handler.NewAnswerHandler(answerService)

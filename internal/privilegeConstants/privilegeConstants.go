@@ -1,6 +1,6 @@
 package privilegeconstants
 
 const (
-	CreateQuestionnari string = "CreateQuestionnari"
-	EditQuestionnari   string = "EditQuestionnari"
+	CreateQuestionnaire string = "CreateQuestionnaire"
+	EditQuestionnaire   string = "EditQuestionnaire"
 )

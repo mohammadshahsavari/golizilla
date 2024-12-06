@@ -10,7 +10,7 @@ import (
 
 type IRolePrivilegeOnInstanceRepository interface {
 	Add(ctx context.Context, rolePrivelegeOnInsance *model.RolePrivilegeOnInstance) error
-	Delete(ctx context.Context, roleId uuid.UUID, privilegeId string, questionnariId uuid.UUID) error
+	Delete(ctx context.Context, roleId uuid.UUID, privilegeId string, questionnaireId uuid.UUID) error
 	GetRolePrivilegesOnInstance(ctx context.Context, roleId uuid.UUID) ([]model.RolePrivilegeOnInstance, error)
 }
 
@@ -30,11 +30,11 @@ func (r *rolePrivilegeOnInstanceRepository) Add(ctx context.Context, rolePrivele
 	return err
 }
 
-func (r *rolePrivilegeOnInstanceRepository) Delete(ctx context.Context, roleId uuid.UUID, privilegeId string, questionnariId uuid.UUID) error {
+func (r *rolePrivilegeOnInstanceRepository) Delete(ctx context.Context, roleId uuid.UUID, privilegeId string, questionnaireId uuid.UUID) error {
 	err := r.db.WithContext(ctx).Delete(&model.RolePrivilegeOnInstance{
 		RoleId:          roleId,
 		PrivilegeId:     privilegeId,
-		QuestionnaireId: questionnariId,
+		QuestionnaireId: questionnaireId,
 	}).Error
 
 	if err != nil {

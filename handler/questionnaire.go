@@ -16,17 +16,17 @@ import (
 	"gorm.io/gorm"
 )
 
-type QuestionnariHandler struct {
-	questionnariService service.IQuestionnaireService
+type QuestionnaireHandler struct {
+	questionnaireService service.IQuestionnaireService
 }
 
-func NewQuestionnariHandler(questionnariService service.IQuestionnaireService) *QuestionnariHandler {
-	return &QuestionnariHandler{
-		questionnariService: questionnariService,
+func NewQuestionnaireHandler(questionnaireService service.IQuestionnaireService) *QuestionnaireHandler {
+	return &QuestionnaireHandler{
+		questionnaireService: questionnaireService,
 	}
 }
 
-func (q *QuestionnariHandler) Create(c *fiber.Ctx) error {
+func (q *QuestionnaireHandler) Create(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
@@ -34,7 +34,7 @@ func (q *QuestionnariHandler) Create(c *fiber.Ctx) error {
 		Message: logmessages.LogQuestionnaireCreateBegin,
 	})
 
-	var request presenter.CreateQuestionnariRequest
+	var request presenter.CreateQuestionnaireRequest
 	if err := c.BodyParser(&request); err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
@@ -53,7 +53,7 @@ func (q *QuestionnariHandler) Create(c *fiber.Ctx) error {
 
 	userModel := request.ToDomain()
 	userModel.OwnerId = c.Locals("user_id").(uuid.UUID)
-	id, err := q.questionnariService.Create(ctx, userModel);
+	id, err := q.questionnaireService.Create(ctx, userModel)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
@@ -62,7 +62,7 @@ func (q *QuestionnariHandler) Create(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
-	err = presenter.Send(c, fiber.StatusOK, true, "Questionnari created successfully", presenter.NewCreateQuestionnariResponse(id), nil)
+	err = presenter.Send(c, fiber.StatusOK, true, "Questionnaire created successfully", presenter.NewCreateQuestionnaireResponse(id), nil)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
@@ -75,11 +75,11 @@ func (q *QuestionnariHandler) Create(c *fiber.Ctx) error {
 		Service: logmessages.LogQuestionnaireHandler,
 		Message: logmessages.LogQuestionnaireCreateSuccessful,
 	})
-	
+
 	return nil
 }
 
-func (q *QuestionnariHandler) Delete(c *fiber.Ctx) error {
+func (q *QuestionnaireHandler) Delete(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
@@ -95,7 +95,7 @@ func (q *QuestionnariHandler) Delete(c *fiber.Ctx) error {
 		})
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	err = q.questionnariService.Delete(ctx, id)
+	err = q.questionnaireService.Delete(ctx, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -128,7 +128,7 @@ func (q *QuestionnariHandler) Delete(c *fiber.Ctx) error {
 	return nil
 }
 
-func (q *QuestionnariHandler) Update(c *fiber.Ctx) error {
+func (q *QuestionnaireHandler) Update(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
@@ -136,7 +136,20 @@ func (q *QuestionnariHandler) Update(c *fiber.Ctx) error {
 		Message: logmessages.LogQuestionnaireUpdateBegin,
 	})
 
-	var request presenter.CreateQuestionnariRequest
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: err.Error(),
+		})
+		return presenter.SendError(c,
+			fiber.StatusBadRequest,
+			"invalid ID format",
+		)
+	}
+
+	var request presenter.UpdateQuestionnaireRequest
+	request.ID = id
 	if err := c.BodyParser(&request); err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
@@ -153,9 +166,10 @@ func (q *QuestionnariHandler) Update(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	userModel := request.ToDomain()
+	// Map fields to update
+	updateFields := request.ToDomain()
 
-	if err := q.questionnariService.Update(ctx, userModel); err != nil {
+	if err := q.questionnaireService.Update(ctx, request.ID, updateFields); err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
 			Message: err.Error(),
@@ -163,7 +177,7 @@ func (q *QuestionnariHandler) Update(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
-	err := presenter.Send(c, fiber.StatusOK, true, "Updated", nil, nil)
+	err = presenter.Send(c, fiber.StatusOK, true, "Updated", nil, nil)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
@@ -180,7 +194,7 @@ func (q *QuestionnariHandler) Update(c *fiber.Ctx) error {
 	return nil
 }
 
-func (q *QuestionnariHandler) GetById(c *fiber.Ctx) error {
+func (q *QuestionnaireHandler) GetById(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
@@ -196,8 +210,7 @@ func (q *QuestionnariHandler) GetById(c *fiber.Ctx) error {
 		})
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-
-	questionnari, err := q.questionnariService.GetById(ctx, id)
+	questionnaire, err := q.questionnaireService.GetById(ctx, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -214,7 +227,7 @@ func (q *QuestionnariHandler) GetById(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
-	err = presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnariResponse(questionnari), nil)
+	err = presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnaireResponse(questionnaire), nil)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
@@ -228,10 +241,10 @@ func (q *QuestionnariHandler) GetById(c *fiber.Ctx) error {
 		Message: logmessages.LogQuestionnaireGetByIdSuccessful,
 	})
 
-	return nil
+	return presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnaireResponse(questionnaire), nil)
 }
 
-func (q *QuestionnariHandler) GetByOwnerId(c *fiber.Ctx) error {
+func (q *QuestionnaireHandler) GetByOwnerId(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
@@ -247,8 +260,7 @@ func (q *QuestionnariHandler) GetByOwnerId(c *fiber.Ctx) error {
 		})
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-
-	questionnaries, err := q.questionnariService.GetByOwnerId(ctx, id)
+	questionnaires, err := q.questionnaireService.GetByOwnerId(ctx, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -265,26 +277,17 @@ func (q *QuestionnariHandler) GetByOwnerId(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
-	err = presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnariesResponse(questionnaries), nil)
-	if err != nil {
-		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
-			Service: logmessages.LogQuestionnaireHandler,
-			Message: err.Error(),
-		})
-		return err
-	}
-
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
 		Service: logmessages.LogQuestionnaireHandler,
 		Message: logmessages.LogQuestionnaireGetByOwnerIdSuccessful,
 	})
 
-	return nil
+	return presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnairesResponse(questionnaires), nil)
 }
 
-func (q *QuestionnariHandler) GetResults(c *websocket.Conn) {
+func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {
 	ctx := context.Background()
-	
+
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
 		Service: logmessages.LogQuestionnaireHandler,
 		Message: logmessages.LogQuestionnaireGetResultsBegin,
@@ -300,7 +303,7 @@ func (q *QuestionnariHandler) GetResults(c *websocket.Conn) {
 		c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
 		return
 	}
-	_, err = q.questionnariService.GetById(context.Background(), id)
+	_, err = q.questionnaireService.GetById(context.Background(), id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -321,7 +324,7 @@ func (q *QuestionnariHandler) GetResults(c *websocket.Conn) {
 
 	var lastValue uint = 0
 	for {
-		questionnari, err := q.questionnariService.GetById(context.Background(), id)
+		questionnaire, err := q.questionnaireService.GetById(context.Background(), id)
 		if err != nil {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogQuestionnaireHandler,
@@ -330,8 +333,8 @@ func (q *QuestionnariHandler) GetResults(c *websocket.Conn) {
 			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
 			break
 		}
-		if lastValue != questionnari.ParticipationCount {
-			lastValue = questionnari.ParticipationCount
+		if lastValue != questionnaire.ParticipationCount {
+			lastValue = questionnaire.ParticipationCount
 			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%d", lastValue)))
 		}
 		time.Sleep(time.Second * 10)

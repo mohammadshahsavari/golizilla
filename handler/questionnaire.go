@@ -66,7 +66,19 @@ func (q *QuestionnaireHandler) Delete(c *fiber.Ctx) error {
 
 func (q *QuestionnaireHandler) Update(c *fiber.Ctx) error {
 	ctx := c.Context()
-	var request presenter.CreateQuestionnaireRequest
+
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		// log
+		fmt.Printf("[Update Questionnaire] invalid input error: %v", err)
+		return presenter.SendError(c,
+			fiber.StatusBadRequest,
+			"invalid ID format",
+		)
+	}
+
+	var request presenter.UpdateQuestionnaireRequest
+	request.ID = id
 	if err := c.BodyParser(&request); err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
@@ -75,14 +87,15 @@ func (q *QuestionnaireHandler) Update(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	userModel := request.ToDomain()
+	// Map fields to update
+	updateFields := request.ToDomain()
 
-	if err := q.questionnaireService.Update(ctx, userModel); err != nil {
-		//log
+	// Pass the ID and update fields to the service
+	if err := q.questionnaireService.Update(ctx, request.ID, updateFields); err != nil {
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
-	return presenter.Send(c, fiber.StatusOK, true, "Updated", nil, nil)
+	return presenter.Send(c, fiber.StatusOK, true, "Questionnaire updated successfully", nil, nil)
 }
 
 func (q *QuestionnaireHandler) GetById(c *fiber.Ctx) error {
@@ -110,7 +123,7 @@ func (q *QuestionnaireHandler) GetByOwnerId(c *fiber.Ctx) error {
 	if err != nil {
 		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
 	}
-	questionnairees, err := q.questionnaireService.GetByOwnerId(ctx, id)
+	questionnaires, err := q.questionnaireService.GetByOwnerId(ctx, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return presenter.SendError(c, fiber.StatusNotFound, err.Error())
@@ -120,7 +133,7 @@ func (q *QuestionnaireHandler) GetByOwnerId(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
 
-	return presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnaireesResponse(questionnairees), nil)
+	return presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnairesResponse(questionnaires), nil)
 }
 
 func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {

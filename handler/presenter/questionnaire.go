@@ -9,14 +9,23 @@ import (
 )
 
 type CreateQuestionnaireRequest struct {
-	StartTime      time.Time     `json:"start_time"`
-	EndTime        time.Time     `json:"end_time"`
+	// StartTime      time.Time     `json:"start_time"`
+	// EndTime        time.Time     `json:"end_time"`
 	Random         bool          `json:"random"`
 	BackCompatible bool          `json:"back_compatible"`
 	Title          string        `json:"title"`
 	AnswerTime     time.Duration `json:"answer_time"`
 	Anonymous      bool          `json:"anonymous"`
 	//TODO: Questions
+}
+
+type UpdateQuestionnaireRequest struct {
+	ID             uuid.UUID      `json:"id"` // Mandatory for updates
+	Random         *bool          `json:"random,omitempty"`
+	BackCompatible *bool          `json:"back_compatible,omitempty"`
+	Title          *string        `json:"title,omitempty"`
+	AnswerTime     *time.Duration `json:"answer_time,omitempty"`
+	Anonymous      *bool          `json:"anonymous,omitempty"`
 }
 
 type CreateQuestionnaireResponseData struct {
@@ -38,26 +47,67 @@ type GetQuestionnaireResponseData struct {
 }
 
 func (req *CreateQuestionnaireRequest) Validate() error {
-	if req.EndTime.Before(req.StartTime) || req.EndTime.Before(time.Now()) {
-		return errors.New("start and end time is not valid")
-	}
+	// Validate Title
 	if req.Title == "" {
 		return errors.New("title can't be empty")
 	}
+
+	// Validate AnswerTime (should be positive)
+	if req.AnswerTime <= 0 {
+		return errors.New("answer time must be greater than zero")
+	}
+
+	// Validate StartTime and EndTime (if used)
+	// if req.StartTime.After(req.EndTime) {
+	//     return errors.New("start time cannot be after end time")
+	// }
+	// if req.EndTime.Before(time.Now()) {
+	//     return errors.New("end time must be in the future")
+	// }
 
 	return nil
 }
 
 func (req *CreateQuestionnaireRequest) ToDomain() *model.Questionnaire {
 	return &model.Questionnaire{
-		StartTime:      req.StartTime,
-		EndTime:        req.EndTime,
+		// StartTime:      req.StartTime,
+		// EndTime:        req.EndTime,
+		CreatedTime:    time.Now(),
 		Random:         req.Random,
 		BackCompatible: req.BackCompatible,
 		Title:          req.Title,
 		AnswerTime:     req.AnswerTime,
 		Anonymous:      req.Anonymous,
 	}
+}
+
+func (r *UpdateQuestionnaireRequest) Validate() error {
+	if r.ID == uuid.Nil {
+		return errors.New("ID is required for updating a questionnaire")
+	}
+	return nil
+}
+
+func (r *UpdateQuestionnaireRequest) ToDomain() map[string]interface{} {
+	updateFields := map[string]interface{}{}
+
+	if r.Random != nil {
+		updateFields["random"] = *r.Random
+	}
+	if r.BackCompatible != nil {
+		updateFields["back_compatible"] = *r.BackCompatible
+	}
+	if r.Title != nil {
+		updateFields["title"] = *r.Title
+	}
+	if r.AnswerTime != nil {
+		updateFields["answer_time"] = *r.AnswerTime
+	}
+	if r.Anonymous != nil {
+		updateFields["anonymous"] = *r.Anonymous
+	}
+
+	return updateFields
 }
 
 func NewCreateQuestionnaireResponse(id uuid.UUID) Response {
@@ -88,7 +138,7 @@ func NewGetQuestionnaireResponse(data *model.Questionnaire) Response {
 	}
 }
 
-func NewGetQuestionnaireesResponse(data []model.Questionnaire) Response {
+func NewGetQuestionnairesResponse(data []model.Questionnaire) Response {
 	var resultData []GetQuestionnaireResponseData
 
 	for _, item := range data {

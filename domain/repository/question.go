@@ -35,7 +35,7 @@ func (r *QuestionRepository) Create(ctx context.Context, question *model.Questio
 }
 
 func (r *QuestionRepository) Update(ctx context.Context, question *model.Question) error {
-	return r.db.WithContext(ctx).Save(question).Error
+	return r.db.WithContext(ctx).Where("id = ?", question.ID).Updates(question).Error
 }
 
 func (r *QuestionRepository) Delete(ctx context.Context, id uuid.UUID) error {
@@ -46,7 +46,7 @@ func (r *QuestionRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.
 	var question model.Question
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&question).Error
 	if err != nil {
-		return nil, fmt.Errorf("failed to find question by ID: %v, %w",id, err)
+		return nil, fmt.Errorf("failed to find question by ID: %v, %w", id, err)
 	}
 	return &question, nil
 }

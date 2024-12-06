@@ -31,6 +31,9 @@ func setupDB(cfg *config.Config) (*gorm.DB, error) {
 		&models.Question{},
 		&models.Answer{},
 		&models.Role{},
+		&models.Privilege{},
+		&models.RolePrivilege{},
+		&models.RolePrivilegeOnInstance{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
@@ -44,6 +47,11 @@ func setupDB(cfg *config.Config) (*gorm.DB, error) {
 		} else {
 			return nil, err
 		}
+	}
+
+	err = createPrivileges(db)
+	if err != nil {
+		return nil, err
 	}
 
 	return db, nil
@@ -78,5 +86,41 @@ func createSuperAdmin(db *gorm.DB, cfg *config.Config) error {
 		Password:   cfg.AdminPassword,
 		RoleId:     role.ID,
 	}
-	return db.Create(admin).Error	
+	return db.Create(admin).Error
+}
+
+func createPrivileges(db *gorm.DB) error {
+	// Define a list of privileges
+	privileges := []models.Privilege{
+		{Id: "CreateQuestionnaire"},
+		{Id: "EditQuestionnaire"},
+		{Id: "DeleteQuestionnaire"},
+		{Id: "ViewQuestionnaire"},
+		{Id: "CreateQuestion"},
+		{Id: "EditQuestion"},
+		{Id: "DeleteQuestion"},
+		{Id: "ViewQuestion"},
+		{Id: "AssignRole"},
+		{Id: "ManagePrivileges"},
+	}
+
+	// Loop through the privileges and add them if they do not exist
+	for _, privilege := range privileges {
+		var existingPrivilege models.Privilege
+		err := db.Where("id = ?", privilege.Id).First(&existingPrivilege).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Privilege does not exist, create it
+			if err := db.Create(&privilege).Error; err != nil {
+				log.Printf("Failed to create privilege '%s': %v", privilege.Id, err)
+				return err
+			}
+			log.Printf("Privilege '%s' created successfully.", privilege.Id)
+		} else if err != nil {
+			// An error occurred while querying the database
+			log.Printf("Error checking privilege '%s': %v", privilege.Id, err)
+			return err
+		}
+	}
+
+	return nil
 }

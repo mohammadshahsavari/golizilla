@@ -33,10 +33,10 @@ type Verify2FARequest struct {
 }
 
 type UpdateProfileRequest struct {
-	FirstName   string `json:"firstName"`
-	LastName    string `json:"lastName"`
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
 	City        string `json:"city"`
-	DateOfBirth string `json:"dateOfBirth"`
+	DateOfBirth string `json:"date_of_birth"`
 }
 
 // Validate validates the CreateUserRequest fields.
@@ -115,10 +115,10 @@ func (r *CreateUserRequest) ToDomain() *model.User {
 func (r *UpdateProfileRequest) ToDomain() *model.User {
 	dob, _ := utils.ParseDate(r.DateOfBirth)
 	return &model.User{
-		FirstName:               r.FirstName,
-		LastName:                r.LastName,
-		City:                    r.City,
-		DateOfBirth:             dob,
+		FirstName:   r.FirstName,
+		LastName:    r.LastName,
+		City:        r.City,
+		DateOfBirth: dob,
 	}
 }
 

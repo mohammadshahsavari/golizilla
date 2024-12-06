@@ -8,8 +8,8 @@ import (
 	"golizilla/handler/presenter"
 	"golizilla/internal/apperrors"
 	"golizilla/internal/logmessages"
-	"golizilla/persistence/logger"
 	privilegeconstants "golizilla/internal/privilegeConstants"
+	"golizilla/persistence/logger"
 	"golizilla/service"
 	"golizilla/service/utils"
 	"time"
@@ -60,16 +60,6 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	user.EmailVerificationExpiry = time.Now().Add(h.Config.VerificationExpiresIn)
 	user.IsActive = false // Ensure the user is inactive until email is verified
 
-	// Attempt to save the user
-	if err := h.UserService.CreateUser(ctx, user); err != nil {
-		// Handle errors as before
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
-			return presenter.SendError(c, fiber.StatusConflict, apperrors.ErrEmailAlreadyExists.Error())
-		}
-		c.Context().Logger().Printf("[CreateUser] Internal error: %v", err)
-		return h.handleError(c, err)
-	}
-
 	role, err := h.RoleService.CreateRole(ctx, user.Username, "Default")
 	if err != nil {
 		c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
@@ -77,8 +67,19 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	//add more privileges
-	if err := h.RoleService.AddPrivilege(ctx, role.ID, privilegeconstants.CreateQuestionnari); err != nil {
+	if err := h.RoleService.AddPrivilege(ctx, role.ID, privilegeconstants.CreateQuestionnaire); err != nil {
 		c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
+		return h.handleError(c, err)
+	}
+
+	// Attempt to save the user
+	user.RoleId = role.ID
+	if err := h.UserService.CreateUser(ctx, user); err != nil {
+		// Handle errors as before
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+			return presenter.SendError(c, fiber.StatusConflict, apperrors.ErrEmailAlreadyExists.Error())
+		}
+		c.Context().Logger().Printf("[CreateUser] Internal error: %v", err)
 		return h.handleError(c, err)
 	}
 

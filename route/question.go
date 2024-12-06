@@ -12,7 +12,7 @@ import (
 
 func SetupQuestionRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, questionService service.IQuestionService) {
 	// Create a group for user routes
-	questionGroup := app.Group("/questions")
+	questionGroup := app.Group("/question")
 
 	// Initialize handlers
 	questionHandler := handler.NewQuestionHandler(questionService)

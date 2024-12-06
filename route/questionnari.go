@@ -33,7 +33,7 @@ func SetupQuestionnaireRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, q
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
 		authMiddleware, questionnaireHandler.GetByOwnerId)
 
-	questionnaireGroup.Post("/update",
+	questionnaireGroup.Put("/update/:id",
 		// middleware.SetTransaction(database.NewGormCommitter(db)),
 		authMiddleware, questionnaireHandler.Update)
 

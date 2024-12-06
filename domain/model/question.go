@@ -7,14 +7,14 @@ import (
 
 type Question struct {
 	ID              uuid.UUID `gorm:"type:uuid;primary_key;"`
-	QuestionnaireId uuid.UUID `gorm:"not null"`
+	QuestionnaireId uuid.UUID `gorm:"type:uuid;not null"`
 	Index           uint
 	QuestionText    string
 	Descriptive     bool
 	OptionsCount    uint
 	CorrectOption   uint
 	MetaDataPath    string
-	OptionsText     string 
+	OptionsText     string
 	SelectedOption  uint
 	Answers         []*Answer `gorm:"foreignKey:QuestionID"`
 }
@@ -26,4 +26,3 @@ func (q *Question) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
-

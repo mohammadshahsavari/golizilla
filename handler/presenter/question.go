@@ -10,7 +10,7 @@ import (
 )
 
 type CreateQuestionRequest struct {
-	QuestionnaireId uuid.UUID `json:"question_id"`
+	QuestionnaireId uuid.UUID `json:"questionnaire_id"`
 	QuestionText    string    `json:"question_text"`
 	Descriptive     bool      `json:"descriptive"`
 	OptionsCount    uint      `json:"options_count"`

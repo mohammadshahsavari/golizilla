@@ -39,8 +39,8 @@ func (h *QuestionHandler) Create(c *fiber.Ctx) error {
 			Service: logmessages.LogQuestionHandler,
 			Message: err.Error(),
 		})
-		return presenter.SendError(c, 
-			fiber.StatusBadRequest, 
+		return presenter.SendError(c,
+			fiber.StatusBadRequest,
 			apperrors.ErrInvalidInput.Error(),
 		)
 	}
@@ -51,30 +51,30 @@ func (h *QuestionHandler) Create(c *fiber.Ctx) error {
 			Service: logmessages.LogQuestionHandler,
 			Message: err.Error(),
 		})
-		return presenter.SendError(c, 
-			fiber.StatusBadRequest, 
+		return presenter.SendError(c,
+			fiber.StatusBadRequest,
 			apperrors.ErrInvalidInput.Error(),
 		)
 	}
 
 	question := request.ToDomain()
 
-	id, err := h.QuestionService.Create(ctx, question)
+	id, err := h.QuestionService.Create(ctx, c.UserContext(), question)
 	if err != nil {
 		// fmt.Printf("[Create Question] Internal error: %v", err)
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionHandler,
 			Message: err.Error(),
 		})
-		return presenter.SendError(c, 
-			fiber.StatusInternalServerError, 
+		return presenter.SendError(c,
+			fiber.StatusInternalServerError,
 			apperrors.ErrInternalServerError.Error(),
 		)
 	}
 
-	err = presenter.Send(c, 
-		fiber.StatusOK, true, 
-		"question successfully created", 
+	err = presenter.Send(c,
+		fiber.StatusOK, true,
+		"question successfully created",
 		presenter.NewCreateQuestionResponse(id),
 		nil,
 	)
@@ -109,8 +109,8 @@ func (h *QuestionHandler) Update(c *fiber.Ctx) error {
 			Message: err.Error(),
 		})
 		// fmt.Printf("[Update Question] invalid input error: %v", err)
-		return presenter.SendError(c, 
-			fiber.StatusBadRequest, 
+		return presenter.SendError(c,
+			fiber.StatusBadRequest,
 			"invalid ID format",
 		)
 	}
@@ -122,8 +122,8 @@ func (h *QuestionHandler) Update(c *fiber.Ctx) error {
 			Message: err.Error(),
 		})
 		// fmt.Printf("[Update Question] invalid input error: %v", err)
-		return presenter.SendError(c, 
-			fiber.StatusBadRequest, 
+		return presenter.SendError(c,
+			fiber.StatusBadRequest,
 			apperrors.ErrInvalidInput.Error(),
 		)
 	}
@@ -134,8 +134,8 @@ func (h *QuestionHandler) Update(c *fiber.Ctx) error {
 			Message: err.Error(),
 		})
 		// fmt.Printf("[Update Question] invalid input error: %v", err)
-		return presenter.SendError(c, 
-			fiber.StatusBadRequest, 
+		return presenter.SendError(c,
+			fiber.StatusBadRequest,
 			apperrors.ErrInvalidInput.Error(),
 		)
 	}
@@ -143,29 +143,29 @@ func (h *QuestionHandler) Update(c *fiber.Ctx) error {
 	question := request.ToDomain()
 	question.ID = id
 
-	err = h.QuestionService.Update(ctx, question); 
+	err = h.QuestionService.Update(ctx, c.UserContext(), question)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionHandler,
 			Message: err.Error(),
 		})
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return presenter.SendError(c, 
-				fiber.StatusNotFound, 
+			return presenter.SendError(c,
+				fiber.StatusNotFound,
 				apperrors.ErrNotFound.Error(),
 			)
 		}
 		// fmt.Printf("[Create Question] internal error: %v", err)
-		return presenter.SendError(c, 
-			fiber.StatusInternalServerError, 
+		return presenter.SendError(c,
+			fiber.StatusInternalServerError,
 			apperrors.ErrInternalServerError.Error(),
 		)
 	}
-	
-	err = presenter.Send(c, 
-		fiber.StatusOK, true, 
-		"question successfully updated", 
-		nil, 
+
+	err = presenter.Send(c,
+		fiber.StatusOK, true,
+		"question successfully updated",
+		nil,
 		nil,
 	)
 	if err != nil {
@@ -198,33 +198,33 @@ func (h *QuestionHandler) Delete(c *fiber.Ctx) error {
 			Service: logmessages.LogQuestionHandler,
 			Message: err.Error(),
 		})
-		return presenter.SendError(c, 
-			fiber.StatusBadRequest, 
+		return presenter.SendError(c,
+			fiber.StatusBadRequest,
 			"invalid ID format",
 		)
 	}
 
-	err = h.QuestionService.Delete(ctx, id)
+	err = h.QuestionService.Delete(ctx, c.UserContext(), id)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionHandler,
 			Message: err.Error(),
 		})
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return presenter.SendError(c, 
-				fiber.StatusNotFound, 
+			return presenter.SendError(c,
+				fiber.StatusNotFound,
 				apperrors.ErrNotFound.Error(),
 			)
 		}
-		return presenter.SendError(c, 
-			fiber.StatusInternalServerError, 
+		return presenter.SendError(c,
+			fiber.StatusInternalServerError,
 			apperrors.ErrInternalServerError.Error(),
 		)
 	}
 
-	err = presenter.Send(c, 
-		fiber.StatusOK, 
-		true, 
+	err = presenter.Send(c,
+		fiber.StatusOK,
+		true,
 		fmt.Sprintf("question with id: (%v) successfully deleted", id),
 		nil,
 		nil,
@@ -259,34 +259,34 @@ func (h *QuestionHandler) GetByID(c *fiber.Ctx) error {
 			Service: logmessages.LogQuestionHandler,
 			Message: err.Error(),
 		})
-		return presenter.SendError(c, 
-			fiber.StatusBadRequest, 
+		return presenter.SendError(c,
+			fiber.StatusBadRequest,
 			"invalid ID format",
 		)
 	}
 
-	question, err := h.QuestionService.GetByID(ctx, id)
+	question, err := h.QuestionService.GetByID(ctx, c.UserContext(), id)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionHandler,
 			Message: err.Error(),
 		})
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return presenter.SendError(c, 
-				fiber.StatusNotFound, 
+			return presenter.SendError(c,
+				fiber.StatusNotFound,
 				apperrors.ErrNotFound.Error(),
 			)
 		}
 		// fmt.Printf("[Get Question] internal error: %v", err)
-		return presenter.SendError(c, 
-			fiber.StatusInternalServerError, 
+		return presenter.SendError(c,
+			fiber.StatusInternalServerError,
 			apperrors.ErrInternalServerError.Error(),
 		)
 	}
 
-	err = presenter.Send(c, 
-		fiber.StatusOK, 
-		true, 
+	err = presenter.Send(c,
+		fiber.StatusOK,
+		true,
 		"question successfully fetched",
 		presenter.NewGetQuestionResponse(question),
 		nil,

@@ -15,17 +15,17 @@ import (
 )
 
 type IUserService interface {
-	CreateUser(ctx context.Context, user *model.User) error
-	GetUserByID(ctx context.Context, id uuid.UUID) (*model.User, error)
-	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
-	AuthenticateUser(ctx context.Context, email, password string) (*model.User, error)
-	VerifyEmail(ctx context.Context, email, code string) error
-	UpdateUser(ctx context.Context, user *model.User) error
+	CreateUser(ctx context.Context, userCtx context.Context, user *model.User) error
+	GetUserByID(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.User, error)
+	GetUserByEmail(ctx context.Context, userCtx context.Context, email string) (*model.User, error)
+	AuthenticateUser(ctx context.Context, userCtx context.Context, email, password string) (*model.User, error)
+	VerifyEmail(ctx context.Context, userCtx context.Context, email, code string) error
+	UpdateUser(ctx context.Context, userCtx context.Context, user *model.User) error
 	// profile services
-	UpdateProfile(ctx context.Context, user *model.User) error
-	GetNotificationList(ctx context.Context, userId uuid.UUID) ([]*model.Notification, error)
-	TransferMoney(ctx context.Context, srcEmail string, dstEmail string, amount uint) error
-	CreateNotification(ctx context.Context, userId uuid.UUID, notification string) error
+	UpdateProfile(ctx context.Context, userCtx context.Context, user *model.User) error
+	GetNotificationList(ctx context.Context, userCtx context.Context, userId uuid.UUID) ([]*model.Notification, error)
+	TransferMoney(ctx context.Context, userCtx context.Context, srcEmail string, dstEmail string, amount uint) error
+	CreateNotification(ctx context.Context, userCtx context.Context, userId uuid.UUID, notification string) error
 }
 
 type UserService struct {
@@ -40,12 +40,12 @@ func NewUserService(userRepo repository.IUserRepository, emailService IEmailServ
 	}
 }
 
-func (s *UserService) CreateUser(ctx context.Context, user *model.User) error {
-	return s.UserRepo.Create(ctx, user)
+func (s *UserService) CreateUser(ctx context.Context, userCtx context.Context, user *model.User) error {
+	return s.UserRepo.Create(ctx, userCtx, user)
 }
 
-func (s *UserService) VerifyEmail(ctx context.Context, email string, code string) error {
-	user, err := s.UserRepo.FindByEmail(ctx, email)
+func (s *UserService) VerifyEmail(ctx context.Context, userCtx context.Context, email string, code string) error {
+	user, err := s.UserRepo.FindByEmail(ctx, userCtx, email)
 	if err != nil {
 		return err
 	}
@@ -60,11 +60,11 @@ func (s *UserService) VerifyEmail(ctx context.Context, email string, code string
 	user.EmailVerificationCode = ""
 	user.EmailVerificationExpiry = time.Time{}
 
-	return s.UserRepo.Update(ctx, user)
+	return s.UserRepo.Update(ctx, userCtx, user)
 }
 
-func (s *UserService) AuthenticateUser(ctx context.Context, email string, password string) (*model.User, error) {
-	user, err := s.UserRepo.FindByEmail(ctx, email)
+func (s *UserService) AuthenticateUser(ctx context.Context, userCtx context.Context, email string, password string) (*model.User, error) {
+	user, err := s.UserRepo.FindByEmail(ctx, userCtx, email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperrors.ErrInvalidCredentials
@@ -85,7 +85,7 @@ func (s *UserService) AuthenticateUser(ctx context.Context, email string, passwo
 			user.AccountLocked = true
 			user.AccountLockedUntil = time.Now().Add(15 * time.Minute)
 		}
-		s.UserRepo.Update(ctx, user)
+		s.UserRepo.Update(ctx, userCtx, user)
 		return nil, apperrors.ErrInvalidCredentials
 	}
 
@@ -93,17 +93,17 @@ func (s *UserService) AuthenticateUser(ctx context.Context, email string, passwo
 	user.FailedLoginAttempts = 0
 	user.AccountLocked = false
 	user.AccountLockedUntil = time.Time{}
-	s.UserRepo.Update(ctx, user)
+	s.UserRepo.Update(ctx, userCtx, user)
 
 	return user, nil
 }
 
-func (s *UserService) GetUserByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
-	return s.UserRepo.FindByID(ctx, id)
+func (s *UserService) GetUserByID(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.User, error) {
+	return s.UserRepo.FindByID(ctx, userCtx, id)
 }
 
-func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
-	user, err := s.UserRepo.FindByEmail(ctx, email)
+func (s *UserService) GetUserByEmail(ctx context.Context, userCtx context.Context, email string) (*model.User, error) {
+	user, err := s.UserRepo.FindByEmail(ctx, userCtx, email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperrors.ErrUserNotFound
@@ -113,18 +113,18 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*model.
 	return user, nil
 }
 
-func (s *UserService) UpdateUser(ctx context.Context, user *model.User) error {
-	return s.UserRepo.Update(ctx, user)
+func (s *UserService) UpdateUser(ctx context.Context, userCtx context.Context, user *model.User) error {
+	return s.UserRepo.Update(ctx, userCtx, user)
 }
 
-func (s *UserService) UpdateProfile(ctx context.Context, updatedUser *model.User) error {
+func (s *UserService) UpdateProfile(ctx context.Context, userCtx context.Context, updatedUser *model.User) error {
 	// Validate input
 	if updatedUser == nil {
 		return fmt.Errorf("updated user information must not be nil")
 	}
 
 	// Fetch the existing user
-	existingUser, err := s.UserRepo.FindByID(ctx, updatedUser.ID)
+	existingUser, err := s.UserRepo.FindByID(ctx, userCtx, updatedUser.ID)
 	if err != nil {
 		return fmt.Errorf("failed to find user with ID %s: %w", updatedUser.ID, err)
 	}
@@ -145,7 +145,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, updatedUser *model.User
 	existingUser.City = updatedUser.City
 
 	// Save changes to the repository
-	if err := s.UserRepo.Update(ctx, existingUser); err != nil {
+	if err := s.UserRepo.Update(ctx, userCtx, existingUser); err != nil {
 		return fmt.Errorf("failed to update user profile: %w", err)
 	}
 
@@ -153,9 +153,9 @@ func (s *UserService) UpdateProfile(ctx context.Context, updatedUser *model.User
 }
 
 // it's need to test
-func (s *UserService) GetNotificationList(ctx context.Context, userId uuid.UUID) ([]*model.Notification, error) {
+func (s *UserService) GetNotificationList(ctx context.Context, userCtx context.Context, userId uuid.UUID) ([]*model.Notification, error) {
 	// Fetch the user with preloaded notifications
-	user, err := s.UserRepo.FindByIDWithNotifications(ctx, userId)
+	user, err := s.UserRepo.FindByIDWithNotifications(ctx, userCtx, userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find user or notifications: %w", err)
 	}
@@ -168,8 +168,7 @@ func (s *UserService) GetNotificationList(ctx context.Context, userId uuid.UUID)
 	return user.NotificationList, nil
 }
 
-
-func (s *UserService) TransferMoney(ctx context.Context, srcEmail string, dstEmail string, amount uint) error {
+func (s *UserService) TransferMoney(ctx context.Context, userCtx context.Context, srcEmail string, dstEmail string, amount uint) error {
 	// Validate input
 	if srcEmail == "" || dstEmail == "" {
 		return fmt.Errorf("source and destination email addresses must not be empty")
@@ -182,13 +181,13 @@ func (s *UserService) TransferMoney(ctx context.Context, srcEmail string, dstEma
 	}
 
 	// Fetch source user
-	src, err := s.UserRepo.FindByEmail(ctx, srcEmail)
+	src, err := s.UserRepo.FindByEmail(ctx, userCtx, srcEmail)
 	if err != nil {
 		return fmt.Errorf("failed to find source user: %w", err)
 	}
 
 	// Fetch destination user
-	dst, err := s.UserRepo.FindByEmail(ctx, dstEmail)
+	dst, err := s.UserRepo.FindByEmail(ctx, userCtx, dstEmail)
 	if err != nil {
 		return fmt.Errorf("failed to find destination user: %w", err)
 	}
@@ -203,23 +202,23 @@ func (s *UserService) TransferMoney(ctx context.Context, srcEmail string, dstEma
 	dst.Wallet += amount
 
 	// Update source user
-	if err := s.UserRepo.Update(ctx, src); err != nil {
+	if err := s.UserRepo.Update(ctx, userCtx, src); err != nil {
 		return fmt.Errorf("failed to update source user: %w", err)
 	}
 
 	// Update destination user
-	if err := s.UserRepo.Update(ctx, dst); err != nil {
+	if err := s.UserRepo.Update(ctx, userCtx, dst); err != nil {
 		// Rollback source user's wallet in case of failure
 		src.Wallet += amount
-		_ = s.UserRepo.Update(ctx, src)
+		_ = s.UserRepo.Update(ctx, userCtx, src)
 		return fmt.Errorf("failed to update destination user: %w", err)
 	}
 
 	return nil
 }
 
-func (s *UserService) CreateNotification(ctx context.Context, userId uuid.UUID, notificationMsg string) error {
-	return s.UserRepo.CreateNotification(ctx, userId, &model.Notification{
+func (s *UserService) CreateNotification(ctx context.Context, userCtx context.Context, userId uuid.UUID, notificationMsg string) error {
+	return s.UserRepo.CreateNotification(ctx, userCtx, userId, &model.Notification{
 		Message: notificationMsg,
 	})
 }

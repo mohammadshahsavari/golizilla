@@ -30,8 +30,8 @@ func RunServer(cfg *config.Config, database *gorm.DB) {
 	// Add Logging IDs to Context middleware
 	middleware.InitSessionStore(cfg)
 	app.Use(middleware.ContextMiddleware())
-	// app.Use(middleware.SetUserContext)
-	// app.Use(middleware.SetTransaction(database))
+	app.Use(middleware.SetUserContext)
+	app.Use(middleware.SetTransaction(database))
 
 	// Add additional middleware for rate limiting
 	app.Use(limiter.New(limiter.Config{

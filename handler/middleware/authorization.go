@@ -14,7 +14,7 @@ func AuthorizationMiddleware(authoriztionService service.IAuthorizationService) 
 		return func(c *fiber.Ctx) error {
 			ctx := c.Context()
 
-			hasPrivilege, err := authoriztionService.IsAuthorized(ctx, c.Locals("user_id").(uuid.UUID), requiredPrivileges...)
+			hasPrivilege, err := authoriztionService.IsAuthorized(ctx, c.UserContext(), c.Locals("user_id").(uuid.UUID), requiredPrivileges...)
 
 			if err != nil {
 				// log

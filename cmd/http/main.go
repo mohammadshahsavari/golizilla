@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 
+	"golizilla/adapters/http/route"
+	database "golizilla/adapters/persistence/gorm"
+	"golizilla/adapters/persistence/logger"
 	"golizilla/config"
-	"golizilla/persistence/database"
-	"golizilla/persistence/logger"
-	"golizilla/route"
 
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap/zapcore"

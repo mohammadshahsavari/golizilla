@@ -56,6 +56,7 @@ func RunServer(cfg *config.Config, database *gorm.DB) {
 	roleRepo := repository.NewRoleRepository(database)
 	userRepo := repository.NewUserRepository(database)
 	rolePrivilegeRepo := repository.NewRolePrivilegeRepository(database)
+	submissionRepo := repository.NewSubmissionRepository(database)
 
 	// Initialize services
 	questionService := service.NewQuestionService(questionRepo)
@@ -65,13 +66,14 @@ func RunServer(cfg *config.Config, database *gorm.DB) {
 	emailService := service.NewEmailService(cfg)
 	userService := service.NewUserService(userRepo, emailService)
 	answerService := service.NewAnswerService(answerRepo)
+	coreService := service.NewCoreService(questionRepo, submissionRepo, questionnaireRepo, answerRepo)
 
 	// Setup routes
 	SetupUserRoutes(app, database, cfg, userService, emailService, roleService)
 	SetupQuestionnaireRoutes(app, database, cfg, questionnaireService, authorizationsService)
 	SetupQuestionRoutes(app, database, cfg, questionService)
 	SetupAnswerRoutes(app, database, cfg, answerService)
-	SetupCoreRoutes(app, database, cfg)
+	SetupCoreRoutes(app, database, cfg, coreService)
 
 	// Start the server
 	host := cfg.Host

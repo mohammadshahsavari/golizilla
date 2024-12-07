@@ -66,7 +66,7 @@ func (r *questionnaireRepository) Update(ctx context.Context, userCtx context.Co
 func (r *questionnaireRepository) GetById(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Questionnaire, error) {
 	var db *gorm.DB
 	if db = myContext.GetDB(userCtx); db == nil {
-		db = db
+		db = r.db
 	}
 	var questionnaire model.Questionnaire
 	err := db.WithContext(ctx).Find(&questionnaire, id).Error

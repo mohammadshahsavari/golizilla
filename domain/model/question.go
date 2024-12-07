@@ -6,20 +6,26 @@ import (
 )
 
 type Question struct {
-	ID              uuid.UUID `gorm:"type:uuid;primary_key;"`
-	QuestionnaireId uuid.UUID `gorm:"type:uuid;not null"`
-	Index           uint
-	QuestionText    string
-	Descriptive     bool
-	OptionsCount    uint
-	CorrectOption   uint
-	MetaDataPath    string
-	OptionsText     string
-	SelectedOption  uint
-	Answers         []*Answer `gorm:"foreignKey:QuestionID"`
+	ID              uuid.UUID     `gorm:"type:uuid;primary_key;"`
+	QuestionnaireId uuid.UUID     `gorm:"type:uuid;not null"` // FK to Questionnaire
+	Questionnaire   Questionnaire `gorm:"foreignKey:QuestionnaireId"`
+
+	Index        uint
+	QuestionText string
+	Descriptive  bool
+	MetaDataPath string
+
+	// For correct option, store an ID
+	CorrectOptionID *uuid.UUID
+	// CorrectOption   *Option `gorm:"foreignKey:CorrectOptionID"`
+
+	// Multiple options
+	Options []Option `gorm:"foreignKey:QuestionID"`
+
+	// Multiple answers for this question
+	Answers []Answer `gorm:"foreignKey:QuestionID"`
 }
 
-// BeforeCreate is a GORM hook to generate a UUID before creating a new record.
 func (q *Question) BeforeCreate(tx *gorm.DB) error {
 	if q.ID == uuid.Nil {
 		q.ID = uuid.New()

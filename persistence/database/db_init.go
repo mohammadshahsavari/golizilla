@@ -24,16 +24,24 @@ func setupDB(cfg *config.Config) (*gorm.DB, error) {
 	}
 
 	// Run migrations for the Ads, Filters, and Users models
+	if err := db.AutoMigrate(&models.Question{}); err != nil {
+		log.Fatalf("Failed to migrate Question: %v", err)
+	}
+	if err := db.AutoMigrate(&models.Option{}); err != nil {
+		log.Fatalf("Failed to migrate Option: %v", err)
+	}
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.Questionnaire{},
 		&models.Notification{},
 		&models.Question{},
+		&models.Option{},
 		&models.Answer{},
 		&models.Role{},
 		&models.Privilege{},
 		&models.RolePrivilege{},
 		&models.RolePrivilegeOnInstance{},
+		&models.UserSubmission{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

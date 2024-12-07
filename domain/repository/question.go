@@ -15,6 +15,7 @@ type IQuestionRepository interface {
 	Update(ctx context.Context, userCtx context.Context, question *model.Question) error
 	Delete(ctx context.Context, userCtx context.Context, id uuid.UUID) error
 	GetByID(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Question, error)
+	GetByQuestionnaireID(ctx context.Context, userCtx context.Context, questionnaireID uuid.UUID) ([]*model.Question, error)
 }
 
 type QuestionRepository struct {
@@ -66,4 +67,18 @@ func (r *QuestionRepository) GetByID(ctx context.Context, userCtx context.Contex
 		return nil, fmt.Errorf("failed to find question by ID: %v, %w", id, err)
 	}
 	return &question, nil
+}
+
+func (r *QuestionRepository) GetByQuestionnaireID(ctx context.Context, userCtx context.Context, questionnaireID uuid.UUID) ([]*model.Question, error) {
+	db := myContext.GetDB(userCtx)
+	if db == nil {
+		db = r.db
+	}
+
+	var questions []*model.Question
+	if err := db.WithContext(ctx).Where("questionnaire_id = ?", questionnaireID).Order("index ASC").Find(&questions).Error; err != nil {
+		return nil, err
+	}
+
+	return questions, nil
 }

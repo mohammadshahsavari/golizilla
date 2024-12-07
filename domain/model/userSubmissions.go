@@ -14,16 +14,20 @@ const (
 	SubmissionsStatusCancelled  SubmissionStatus = "cancelled"
 )
 
-// User represents a user in the domain layer.
 type UserSubmission struct {
 	ID              uuid.UUID        `gorm:"type:uuid;primary_key;"`
-	UserId          uuid.UUID        `gorm:"not null"`
-	QuestionnaireId uuid.UUID        `gorm:"not null"`
-	AnswersId       uuid.UUID        `gorm:"not null"`
-	Status          SubmissionStatus `gorm:"not null;type:submission_status;default:'in_progress'"`
+	UserId          uuid.UUID        `gorm:"type:uuid;not null"` // FK to User
+	User            User             `gorm:"foreignKey:UserId"`
+	QuestionnaireId uuid.UUID        `gorm:"type:uuid;not null"` // FK to Questionnaire
+	Questionnaire   Questionnaire    `gorm:"foreignKey:QuestionnaireId"`
+	Status          SubmissionStatus `gorm:"not null;default:'in_progress'"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
-	User            User          `gorm:"foreinKey:UserId"`
-	Questionnaire   Questionnaire `gorm:"foreinKey:QuestionnaireId"`
-	Answers         []Answer      `gorm:"foreignKey:AnswersID"`
+
+	// One submission has multiple answers
+	// We linked it above in Answer with UserSubmissionID
+	Answers []Answer `gorm:"foreignKey:UserSubmissionID"`
+
+	// If you need to track current question index
+	CurrentQuestionIndex int `gorm:"default:0"`
 }

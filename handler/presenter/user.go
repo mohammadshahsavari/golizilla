@@ -5,6 +5,7 @@ import (
 	"golizilla/domain/model"
 	"golizilla/service/utils"
 	"regexp"
+	"strconv"
 
 	"github.com/google/uuid"
 )
@@ -56,8 +57,8 @@ func (r *CreateUserRequest) Validate() error {
 	if r.NationalID == "" {
 		return errors.New("national ID is required")
 	}
-	if !isValidNationalID(r.NationalID) {
-		return errors.New("national ID format is invalid") // Placeholder for NationalID validation
+	if err := ValidateNationalID(r.NationalID); err != nil {
+		return errors.New("national ID format is invalid")
 	}
 	if len(r.Password) < 6 {
 		return errors.New("password must be at least 8 characters long")
@@ -165,17 +166,33 @@ func isValidEmail(email string) bool {
 }
 
 // isValidNationalID validates a national ID format (placeholder).
-func isValidNationalID(nationalID string) bool {
-	for i := 0; i < 10; i++ {
-		if nationalID[i] < '0' || nationalID[i] > '9' {
-			return false
-		}
+func ValidateNationalID(nationalID string) error {
+	// Check length
+	if len(nationalID) != 10 {
+		return errors.New("national ID must be exactly 10 digits")
 	}
-	check := int(nationalID[9] - '0')
+
+	// Parse each digit
 	sum := 0
 	for i := 0; i < 9; i++ {
-		sum += int(nationalID[i]-'0') * (10 - i)
+		digit, err := strconv.Atoi(string(nationalID[i]))
+		if err != nil {
+			return errors.New("national ID must contain only numeric characters")
+		}
+		sum += digit * (10 - i)
 	}
+
+	// Extract check digit
+	checkDigit, err := strconv.Atoi(string(nationalID[9]))
+	if err != nil {
+		return errors.New("invalid check digit in national ID")
+	}
+
+	// Calculate modulus and validate
 	sum %= 11
-	return (sum < 2 && check == sum) || (sum >= 2 && check+sum == 11)
+	if (sum < 2 && checkDigit == sum) || (sum >= 2 && checkDigit == 11-sum) {
+		return nil // Valid national ID
+	}
+
+	return errors.New("invalid national ID format")
 }

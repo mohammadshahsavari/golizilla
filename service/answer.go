@@ -13,6 +13,7 @@ type IAnswerService interface {
 	Update(ctx context.Context, userCtx context.Context, answer *model.Answer) error
 	Delete(ctx context.Context, userCtx context.Context, id uuid.UUID) error
 	GetByID(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Answer, error)
+	GetByQuestionId(ctx context.Context, userCtx context.Context, questionId uuid.UUID) ([]model.Answer, error)
 }
 
 type AnswerService struct {
@@ -39,4 +40,8 @@ func (s *AnswerService) Delete(ctx context.Context, userCtx context.Context, id 
 
 func (s *AnswerService) GetByID(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Answer, error) {
 	return s.answerRepo.GetByID(ctx, userCtx, id)
+}
+
+func (s *AnswerService) GetByQuestionId(ctx context.Context, userCtx context.Context, questionId uuid.UUID) ([]model.Answer, error) {
+	return s.answerRepo.GetByQuestionId(ctx, userCtx, questionId)
 }

@@ -13,6 +13,7 @@ type IQuestionService interface {
 	Update(ctx context.Context, userCtx context.Context, question *model.Question) error
 	Delete(ctx context.Context, userCtx context.Context, id uuid.UUID) error
 	GetByID(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Question, error)
+	GetByQuestionnariId(ctx context.Context, userCtx context.Context, questionnariId uuid.UUID) ([]model.Question, error)
 }
 
 type QuestionService struct {
@@ -39,4 +40,8 @@ func (s *QuestionService) Delete(ctx context.Context, userCtx context.Context, i
 
 func (s *QuestionService) GetByID(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Question, error) {
 	return s.QuestionRepo.GetByID(ctx, userCtx, id)
+}
+
+func (s *QuestionService) GetByQuestionnariId(ctx context.Context, userCtx context.Context, questionnariId uuid.UUID) ([]model.Question, error) {
+	return s.QuestionRepo.GetByQuestionnariId(ctx, userCtx, questionnariId)
 }

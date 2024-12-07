@@ -15,6 +15,7 @@ type IQuestionRepository interface {
 	Update(ctx context.Context, userCtx context.Context, question *model.Question) error
 	Delete(ctx context.Context, userCtx context.Context, id uuid.UUID) error
 	GetByID(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Question, error)
+	GetByQuestionnariId(ctx context.Context, userCtx context.Context, questionnariId uuid.UUID) ([]model.Question, error)
 }
 
 type QuestionRepository struct {
@@ -66,4 +67,17 @@ func (r *QuestionRepository) GetByID(ctx context.Context, userCtx context.Contex
 		return nil, fmt.Errorf("failed to find question by ID: %v, %w", id, err)
 	}
 	return &question, nil
+}
+
+func (r *QuestionRepository) GetByQuestionnariId(ctx context.Context, userCtx context.Context, questionnariId uuid.UUID) ([]model.Question, error) {
+	var db *gorm.DB
+	if db = myContext.GetDB(userCtx); db == nil {
+		db = r.db
+	}
+	var questions []model.Question
+	err := db.WithContext(ctx).Where("questionnaire_id = ?", questionnariId).Find(&questions).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to find questions by questionnari Id: %v, %w", questionnariId, err)
+	}
+	return questions, nil
 }

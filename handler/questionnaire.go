@@ -8,6 +8,7 @@ import (
 	"golizilla/internal/logmessages"
 	"golizilla/persistence/logger"
 	"golizilla/service"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -18,11 +19,19 @@ import (
 
 type QuestionnaireHandler struct {
 	questionnaireService service.IQuestionnaireService
+	questionService      service.QuestionService
+	answerService        service.AnswerService
 }
 
-func NewQuestionnaireHandler(questionnaireService service.IQuestionnaireService) *QuestionnaireHandler {
+func NewQuestionnaireHandler(
+	questionnaireService service.IQuestionnaireService,
+	questionService service.QuestionService,
+	answerService service.AnswerService,
+) *QuestionnaireHandler {
 	return &QuestionnaireHandler{
 		questionnaireService: questionnaireService,
+		questionService:      questionService,
+		answerService:        answerService,
 	}
 }
 
@@ -333,9 +342,37 @@ func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {
 			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
 			break
 		}
+		questions, err := q.questionService.GetByQuestionnariId(context.Background(), nil, questionnaire.Id)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
+			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
+			break
+		}
+		results := []string{}
+		for _, question := range questions {
+			answers, err := q.answerService.GetByQuestionId(context.Background(), nil, question.ID)
+			if err != nil {
+				logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+					Service: logmessages.LogQuestionnaireHandler,
+					Message: err.Error(),
+				})
+				c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
+				break
+			}
+			answerResult := ""
+			for _, answer := range answers {
+				answerResult += "\n" + strconv.Itoa(int(answer.AnswerOption))
+			}
+			results = append(results, question.QuestionText+answerResult)
+			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("quetions and answers are: %v", results)))
+		}
+
 		if lastValue != questionnaire.ParticipationCount {
 			lastValue = questionnaire.ParticipationCount
-			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%d", lastValue)))
+			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Number of participants: %d", lastValue)))
 		}
 		time.Sleep(time.Second * 10)
 	}

@@ -26,18 +26,10 @@ func SetupAnswerRoutes(
 	authMiddleware := middleware.AuthMiddleware(cfg)
 
 	// Protected routes
-	answerGroup.Post("/create",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, answerHandler.Create)
+	answerGroup.Post("/create", authMiddleware, answerHandler.Create)
 
-	answerGroup.Put("/update/:id",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, answerHandler.Update)
-	answerGroup.Get("/:id",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, answerHandler.GetByID)
+	answerGroup.Put("/update/:id", authMiddleware, answerHandler.Update)
+	answerGroup.Get("/:id", authMiddleware, answerHandler.GetByID)
 
-	answerGroup.Delete("/:id",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, answerHandler.Delete)
+	answerGroup.Delete("/:id", authMiddleware, answerHandler.Delete)
 }

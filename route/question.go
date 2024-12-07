@@ -21,19 +21,11 @@ func SetupQuestionRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, questi
 	authMiddleware := middleware.AuthMiddleware(cfg)
 
 	// Protected routes
-	questionGroup.Post("/create",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.Create)
+	questionGroup.Post("/create", authMiddleware, questionHandler.Create)
 
-	questionGroup.Put("/update/:id",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.Update)
+	questionGroup.Put("/update/:id", authMiddleware, questionHandler.Update)
 
-	questionGroup.Get("/:id",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.GetByID)
+	questionGroup.Get("/:id", authMiddleware, questionHandler.GetByID)
 
-	questionGroup.Delete("/:id",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.Delete)
+	questionGroup.Delete("/:id", authMiddleware, questionHandler.Delete)
 }

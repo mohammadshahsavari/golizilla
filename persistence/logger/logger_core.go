@@ -2,12 +2,14 @@ package logger
 
 import (
 	"context"
+	"golizilla/config"
 	"log"
 	"sync"
 	"time"
 
 	// Import middleware for session handling
 
+	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -157,6 +159,19 @@ type LogFields struct {
 	TraceID       string
 	Message       string
 	Context       interface{}
+	Type          string
+}
+
+type MiddlewareLogFields struct {
+	Duration  int64  `json:"duration,omitempty"` // Duration in milliseconds
+	Status    int    `json:"status,omitempty"`
+	Method    string `json:"method,omitempty"`
+	URL       string `json:"url,omitempty"`
+	IP        string `json:"ip,omitempty"`
+	UserAgent string `json:"user_agent,omitempty"`
+	Referrer  string `json:"referrer,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Error     string `json:"error,omitempty"`
 }
 
 // addDefaultFields adds default values for trace_id, transaction_id, and session_id.
@@ -194,6 +209,7 @@ func (l *Logger) addDefaultFieldsFromContext(fields LogFields, ctx context.Conte
 // LogInfo logs an info-level message with default fields included.
 func (l *Logger) LogInfoFromContext(ctx context.Context, fields LogFields) {
 	fields = l.addDefaultFieldsFromContext(fields, ctx)
+	fields.Type = "APP_LOGS"
 	l.zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Info(fields.Message, // Adjust caller tracking
 		zap.String("service", fields.Service),
 		zap.String("endpoint", fields.Endpoint),
@@ -201,6 +217,7 @@ func (l *Logger) LogInfoFromContext(ctx context.Context, fields LogFields) {
 		zap.String("session_id", fields.SessionID),
 		zap.String("transaction_id", fields.TransactionID),
 		zap.String("trace_id", fields.TraceID),
+		zap.String("type", fields.Type),
 		zap.Any("context", fields.Context),
 	)
 }
@@ -208,6 +225,7 @@ func (l *Logger) LogInfoFromContext(ctx context.Context, fields LogFields) {
 // LogError logs an error-level message with default fields included.
 func (l *Logger) LogErrorFromContext(ctx context.Context, fields LogFields) {
 	fields = l.addDefaultFieldsFromContext(fields, ctx)
+	fields.Type = "APP_LOGS"
 	l.zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Error(fields.Message, // Ensure caller tracking
 		zap.String("service", fields.Service),
 		zap.String("endpoint", fields.Endpoint),
@@ -215,6 +233,7 @@ func (l *Logger) LogErrorFromContext(ctx context.Context, fields LogFields) {
 		zap.String("session_id", fields.SessionID),
 		zap.String("transaction_id", fields.TransactionID),
 		zap.String("trace_id", fields.TraceID),
+		zap.String("type", fields.Type),
 		zap.Any("context", fields.Context),
 	)
 }
@@ -222,6 +241,7 @@ func (l *Logger) LogErrorFromContext(ctx context.Context, fields LogFields) {
 // LogDebug logs a debug-level message with default fields included.
 func (l *Logger) LogDebugFromContext(ctx context.Context, fields LogFields) {
 	fields = l.addDefaultFieldsFromContext(fields, ctx)
+	fields.Type = "APP_LOGS"
 	l.zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Debug(fields.Message, // Ensure caller tracking
 		zap.String("service", fields.Service),
 		zap.String("endpoint", fields.Endpoint),
@@ -229,6 +249,7 @@ func (l *Logger) LogDebugFromContext(ctx context.Context, fields LogFields) {
 		zap.String("session_id", fields.SessionID),
 		zap.String("transaction_id", fields.TransactionID),
 		zap.String("trace_id", fields.TraceID),
+		zap.String("type", fields.Type),
 		zap.Any("context", fields.Context),
 	)
 }
@@ -236,6 +257,7 @@ func (l *Logger) LogDebugFromContext(ctx context.Context, fields LogFields) {
 // LogWarning logs a warning-level message with default fields included.
 func (l *Logger) LogWarningFromContext(ctx context.Context, fields LogFields) {
 	fields = l.addDefaultFieldsFromContext(fields, ctx)
+	fields.Type = "APP_LOGS"
 	l.zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Warn(fields.Message, // Ensure caller tracking
 		zap.String("service", fields.Service),
 		zap.String("endpoint", fields.Endpoint),
@@ -243,6 +265,7 @@ func (l *Logger) LogWarningFromContext(ctx context.Context, fields LogFields) {
 		zap.String("session_id", fields.SessionID),
 		zap.String("transaction_id", fields.TransactionID),
 		zap.String("trace_id", fields.TraceID),
+		zap.String("type", fields.Type),
 		zap.Any("context", fields.Context),
 	)
 }
@@ -250,6 +273,7 @@ func (l *Logger) LogWarningFromContext(ctx context.Context, fields LogFields) {
 // LogFatal logs a fatal-level message with default fields included.
 func (l *Logger) LogFatalFromContext(ctx context.Context, fields LogFields) {
 	fields = l.addDefaultFieldsFromContext(fields, ctx)
+	fields.Type = "APP_LOGS"
 	l.zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)).Fatal(fields.Message, // Ensure caller tracking
 		zap.String("service", fields.Service),
 		zap.String("endpoint", fields.Endpoint),
@@ -257,6 +281,64 @@ func (l *Logger) LogFatalFromContext(ctx context.Context, fields LogFields) {
 		zap.String("session_id", fields.SessionID),
 		zap.String("transaction_id", fields.TransactionID),
 		zap.String("trace_id", fields.TraceID),
+		zap.String("type", fields.Type),
 		zap.Any("context", fields.Context),
 	)
+}
+
+func (l *Logger) LogMiddleware(ctx context.Context, fields MiddlewareLogFields) {
+	middlewareLogger := l.zapLogger.WithOptions(
+		zap.WithCaller(false),
+	)
+	middlewareLogger.Info("Middleware log entry",
+		zap.String("type", fields.Type),
+		zap.Int64("duration_ms", fields.Duration),
+		zap.Int("status", fields.Status),
+		zap.String("method", fields.Method),
+		zap.String("url", fields.URL),
+		zap.String("ip", fields.IP),
+		zap.String("user_agent", fields.UserAgent),
+		zap.String("referrer", fields.Referrer),
+		zap.String("error", fields.Error),
+	)
+}
+
+func ResponseLogger(cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Capture start time
+		start := time.Now()
+
+		// Proceed with the request
+		err := c.Next()
+
+		// Calculate request duration
+		duration := time.Since(start).Milliseconds()
+
+		// Gather response details
+		logFields := MiddlewareLogFields{
+			Duration:  duration,
+			Status:    c.Response().StatusCode(),
+			Method:    c.Method(),
+			URL:       c.OriginalURL(),
+			IP:        c.IP(),
+			UserAgent: string(c.Request().Header.UserAgent()),
+			Referrer:  string(c.Request().Header.Referer()),
+			Type:      "MIDDLEWARE_LOGS",
+			Error:     errToString(err),
+		}
+
+		// Use the dedicated middleware logger
+		GetLogger().LogMiddleware(c.Context(), logFields)
+
+		// Return any errors that occurred
+		return err
+	}
+}
+
+// Helper to safely convert errors to string
+func errToString(err error) string {
+	if err != nil {
+		return err.Error()
+	}
+	return ""
 }

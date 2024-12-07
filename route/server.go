@@ -8,6 +8,7 @@ import (
 	"golizilla/config"
 	"golizilla/domain/repository"
 	"golizilla/handler/middleware"
+	customLogger "golizilla/persistence/logger"
 	"golizilla/service"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,6 +25,8 @@ func RunServer(cfg *config.Config, database *gorm.DB) {
 
 	// Add middleware for logging, panic recovery, and CORS
 	app.Use(logger.New())
+	app.Use(customLogger.ResponseLogger(cfg))
+
 	app.Use(recover.New())
 	app.Use(cors.New())
 

@@ -15,6 +15,7 @@ type IQuestionnaireRepository interface {
 	Update(ctx context.Context, userCtx context.Context, id uuid.UUID, questionnaire map[string]interface{}) error
 	GetById(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Questionnaire, error)
 	GetByOwnerId(ctx context.Context, userCtx context.Context, ownerId uuid.UUID) ([]model.Questionnaire, error)
+	IsOwner(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID) (bool, error)
 }
 
 type questionnaireRepository struct {
@@ -89,4 +90,19 @@ func (r *questionnaireRepository) GetByOwnerId(ctx context.Context, userCtx cont
 	}
 
 	return questionnaires, err
+}
+
+func (r *questionnaireRepository) IsOwner(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID) (bool, error) {
+	var db *gorm.DB
+	if db = myContext.GetDB(userCtx); db == nil {
+		db = r.db
+	}
+
+	var questionnari model.Questionnaire
+	rersult := db.WithContext(ctx).Where("owner_id = ? AND id = ?", userId, questionnariId).Limit(1).Find(&questionnari)
+	if rersult.Error != nil {
+		//log
+	}
+
+	return rersult.RowsAffected > 0, rersult.Error
 }

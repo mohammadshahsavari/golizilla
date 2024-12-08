@@ -15,22 +15,26 @@ type IRoleService interface {
 	GetRoleById(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Role, error)
 	GetRoleByUserId(ctx context.Context, userCtx context.Context, userId uuid.UUID) (*model.Role, error)
 	HasPrivileges(ctx context.Context, userCtx context.Context, id uuid.UUID, privileges ...string) (bool, error)
+	AddPrivilegeOnInstance(ctx context.Context, userCtx context.Context, roleId uuid.UUID, questionnaireId uuid.UUID, privileges ...string) error
 }
 
 type roleService struct {
-	roleRepo          repository.IRoleRepository
-	userRepo          repository.IUserRepository
-	rolePrivilegeRepo repository.IRolePrivilegeRepository
+	roleRepo                    repository.IRoleRepository
+	userRepo                    repository.IUserRepository
+	rolePrivilegeRepo           repository.IRolePrivilegeRepository
+	rolePrivilegeOnInstanceRepo repository.IRolePrivilegeOnInstanceRepository
 }
 
 func NewRoleService(roleRepo repository.IRoleRepository,
 	userRepo repository.IUserRepository,
-	rolePrivilegeRepo repository.IRolePrivilegeRepository) IRoleService {
+	rolePrivilegeRepo repository.IRolePrivilegeRepository,
+	rolePrivilegeOnInstanceRepo repository.IRolePrivilegeOnInstanceRepository) IRoleService {
 
 	return &roleService{
-		roleRepo:          roleRepo,
-		userRepo:          userRepo,
-		rolePrivilegeRepo: rolePrivilegeRepo,
+		roleRepo:                    roleRepo,
+		userRepo:                    userRepo,
+		rolePrivilegeRepo:           rolePrivilegeRepo,
+		rolePrivilegeOnInstanceRepo: rolePrivilegeOnInstanceRepo,
 	}
 }
 
@@ -54,6 +58,21 @@ func (s *roleService) AddPrivilege(ctx context.Context, userCtx context.Context,
 			PrivilegeId: privilege,
 		}
 		if err := s.rolePrivilegeRepo.Add(ctx, userCtx, rolePrivilege); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *roleService) AddPrivilegeOnInstance(ctx context.Context, userCtx context.Context, roleId uuid.UUID, questionnaireId uuid.UUID, privileges ...string) error {
+	for _, privilege := range privileges {
+		rolePrivilegeOnInstance := &model.RolePrivilegeOnInstance{
+			RoleId:          roleId,
+			PrivilegeId:     privilege,
+			QuestionnaireId: questionnaireId,
+		}
+		if err := s.rolePrivilegeOnInstanceRepo.Add(ctx, userCtx, rolePrivilegeOnInstance); err != nil {
 			return err
 		}
 	}

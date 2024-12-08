@@ -18,11 +18,13 @@ import (
 
 type QuestionnaireHandler struct {
 	questionnaireService service.IQuestionnaireService
+	roleService          service.IRoleService
 }
 
-func NewQuestionnaireHandler(questionnaireService service.IQuestionnaireService) *QuestionnaireHandler {
+func NewQuestionnaireHandler(questionnaireService service.IQuestionnaireService, roleService service.IRoleService) *QuestionnaireHandler {
 	return &QuestionnaireHandler{
 		questionnaireService: questionnaireService,
+		roleService:          roleService,
 	}
 }
 
@@ -283,6 +285,82 @@ func (q *QuestionnaireHandler) GetByOwnerId(c *fiber.Ctx) error {
 	})
 
 	return presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnairesResponse(questionnaires), nil)
+}
+
+func (q *QuestionnaireHandler) GiveAcess(c *fiber.Ctx) error {
+	ctx := c.Context()
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogQuestionnaireHandler,
+		Message: logmessages.LogQuestionnaireGetByOwnerIdBegin,
+	})
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: err.Error(),
+		})
+		return presenter.SendError(c, fiber.StatusBadRequest, "invalid ID format")
+	}
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: logmessages.LogCastUserIdError,
+		})
+		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
+	}
+	isOwner, err := q.questionnaireService.IsOwner(ctx, c.UserContext(), id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
+			return presenter.SendError(c, fiber.StatusNotFound, err.Error())
+		}
+
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: err.Error(),
+		})
+		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
+	}
+
+	if !isOwner {
+		return presenter.SendError(c, fiber.StatusInternalServerError, "you arent owner of this questionnari")
+	}
+	var request presenter.GiveAcessRequest
+	if err := c.BodyParser(&request); err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: err.Error(),
+		})
+		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
+	}
+	role, err := q.roleService.GetRoleByUserId(ctx, c.UserContext(), userID)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: err.Error(),
+		})
+		return presenter.SendError(c, fiber.StatusBadRequest, "failed to get role")
+	}
+	err = q.roleService.AddPrivilegeOnInstance(ctx, c.UserContext(), role.ID, id, request.Privileges...)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: err.Error(),
+		})
+		return presenter.SendError(c, fiber.StatusBadRequest, "failed to add privilges on instance")
+	}
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogQuestionnaireHandler,
+		Message: logmessages.LogQuestionnaireGiveAccessSuccessful,
+	})
+
+	return presenter.Send(c, fiber.StatusOK, true, "", nil, nil)
 }
 
 func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {

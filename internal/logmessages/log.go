@@ -45,11 +45,13 @@ var (
 	LogQuestionnaireGetByIdBegin           = "starting questionnaire GetById"
 	LogQuestionnaireGetByOwnerIdBegin      = "starting questionnaire GetByOwnerId"
 	LogQuestionnaireGetResultsBegin        = "starting questionnaire GetResults"
+	LogQuestionnaireGiveAccessBegin        = "starting questionnaire GiveAccess"
 	LogQuestionnaireCreateSuccessful       = "questionnaire Created successfully"
 	LogQuestionnaireDeleteSuccessful       = "questionnaire Deleted successfully"
 	LogQuestionnaireUpdateSuccessful       = "questionnaire Updated successfully"
 	LogQuestionnaireGetByIdSuccessful      = "questionnaire Got ById successfully"
 	LogQuestionnaireGetByOwnerIdSuccessful = "questionnaire Got ByOwnerId successfully"
+	LogQuestionnaireGiveAccessSuccessful   = "questionnaire GiveAccess successfully"
 	LogQuestionnaireGetResultsEnd          = "questionnaire GetResults ended"
 
 	// Question
@@ -72,7 +74,7 @@ var (
 	LogAnswerService             = "answer_service"
 	LogAnswerRepository          = "answer_repository"
 	LogAnswerModel               = "answer_model"
-	_                              = ""
+	_                            = ""
 	LogAnswerCreateBegin         = "starting answer Create"
 	LogAnswerUpdateBegin         = "starting answer Update"
 	LogAnswerDeleteBegin         = "starting answer Delete"
@@ -82,5 +84,6 @@ var (
 	LogAnswerDeleteSuccessfully  = "answer Deleted successfully"
 	LogAnswerGetByIDSuccessfully = "answer Got ByID successfully"
 
+	LogCastUserIdError = "failed to cast user id"
 	// Add more as needed
 )

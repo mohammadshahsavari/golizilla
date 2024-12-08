@@ -9,14 +9,19 @@ import (
 )
 
 type CreateQuestionnaireRequest struct {
-	// StartTime      time.Time     `json:"start_time"`
-	// EndTime        time.Time     `json:"end_time"`
+	StartTime      time.Time     `json:"start_time"`
+	EndTime        time.Time     `json:"end_time"`
 	Random         bool          `json:"random"`
 	BackCompatible bool          `json:"back_compatible"`
 	Title          string        `json:"title"`
 	AnswerTime     time.Duration `json:"answer_time"`
 	Anonymous      bool          `json:"anonymous"`
 	//TODO: Questions
+}
+
+type GiveAcessRequest struct {
+	UserID     uuid.UUID `json:"user_id"`
+	Privileges []string  `json:"privileges"`
 }
 
 type UpdateQuestionnaireRequest struct {
@@ -57,21 +62,20 @@ func (req *CreateQuestionnaireRequest) Validate() error {
 		return errors.New("answer time must be greater than zero")
 	}
 
-	// Validate StartTime and EndTime (if used)
-	// if req.StartTime.After(req.EndTime) {
-	//     return errors.New("start time cannot be after end time")
-	// }
-	// if req.EndTime.Before(time.Now()) {
-	//     return errors.New("end time must be in the future")
-	// }
+	if req.StartTime.After(req.EndTime) {
+		return errors.New("start time cannot be after end time")
+	}
+	if req.EndTime.Before(time.Now()) {
+		return errors.New("end time must be in the future")
+	}
 
 	return nil
 }
 
 func (req *CreateQuestionnaireRequest) ToDomain() *model.Questionnaire {
 	return &model.Questionnaire{
-		// StartTime:      req.StartTime,
-		// EndTime:        req.EndTime,
+		StartTime:      req.StartTime,
+		EndTime:        req.EndTime,
 		CreatedTime:    time.Now(),
 		Random:         req.Random,
 		BackCompatible: req.BackCompatible,

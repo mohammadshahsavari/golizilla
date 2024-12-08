@@ -14,6 +14,7 @@ type IQuestionnaireService interface {
 	Update(ctx context.Context, userCtx context.Context, id uuid.UUID, questionnaire map[string]interface{}) error
 	GetById(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Questionnaire, error)
 	GetByOwnerId(ctx context.Context, userCtx context.Context, ownerId uuid.UUID) ([]model.Questionnaire, error)
+	IsOwner(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID) (bool, error)
 }
 
 type questionnaireService struct {
@@ -51,4 +52,8 @@ func (q *questionnaireService) GetById(ctx context.Context, userCtx context.Cont
 
 func (q *questionnaireService) GetByOwnerId(ctx context.Context, userCtx context.Context, ownerId uuid.UUID) ([]model.Questionnaire, error) {
 	return q.repo.GetByOwnerId(ctx, userCtx, ownerId)
+}
+
+func (q *questionnaireService) IsOwner(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID) (bool, error) {
+	return q.repo.IsOwner(ctx, userCtx, userId, questionnariId)
 }

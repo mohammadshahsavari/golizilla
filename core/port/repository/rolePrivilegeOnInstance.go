@@ -13,6 +13,7 @@ type IRolePrivilegeOnInstanceRepository interface {
 	Add(ctx context.Context, userCtx context.Context, rolePrivelegeOnInsance *model.RolePrivilegeOnInstance) error
 	Delete(ctx context.Context, userCtx context.Context, roleId uuid.UUID, privilegeId string, questionnaireId uuid.UUID) error
 	GetRolePrivilegesOnInstance(ctx context.Context, userCtx context.Context, roleId uuid.UUID) ([]model.RolePrivilegeOnInstance, error)
+	HasPrivilegesOnInsance(ctx context.Context, userCtx context.Context, roleId uuid.UUID, questionnariId uuid.UUID, privileges ...string) (bool, error)
 }
 
 type rolePrivilegeOnInstanceRepository struct {
@@ -64,4 +65,27 @@ func (r *rolePrivilegeOnInstanceRepository) GetRolePrivilegesOnInstance(ctx cont
 	}
 
 	return rolePrivilegeOnInstance, err
+}
+
+func (r *rolePrivilegeOnInstanceRepository) HasPrivilegesOnInsance(
+	ctx context.Context,
+	userCtx context.Context,
+	roleId uuid.UUID,
+	questionnariId uuid.UUID,
+	privileges ...string) (bool, error) {
+	var db *gorm.DB
+	if db = myContext.GetDB(userCtx); db == nil {
+		db = r.db
+	}
+	var rolePrivilegeOnInstance []model.RolePrivilegeOnInstance
+	// Query matching both role_id and privilege_id
+	result := db.WithContext(ctx).Where("role_id = ? AND privilege_id IN ? AND questionnaire_id", roleId, privileges, questionnariId).Find(&rolePrivilegeOnInstance)
+
+	if result.Error != nil {
+		// Log the error if necessary
+		// log.Printf("Error fetching role privileges: %v", err)
+		return false, result.Error
+	}
+
+	return result.RowsAffected > 0, result.Error
 }

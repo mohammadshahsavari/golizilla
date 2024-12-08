@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"golizilla/config"
 	models "golizilla/core/domain/model"
+	privilegeconstants "golizilla/internal/privilege"
 	"log"
 	"time"
 
@@ -100,16 +101,17 @@ func createSuperAdmin(db *gorm.DB, cfg *config.Config) error {
 func createPrivileges(db *gorm.DB) error {
 	// Define a list of privileges
 	privileges := []models.Privilege{
-		{Id: "CreateQuestionnaire"},
-		{Id: "EditQuestionnaire"},
-		{Id: "DeleteQuestionnaire"},
-		{Id: "ViewQuestionnaire"},
-		{Id: "CreateQuestion"},
-		{Id: "EditQuestion"},
-		{Id: "DeleteQuestion"},
-		{Id: "ViewQuestion"},
-		{Id: "AssignRole"},
-		{Id: "ManagePrivileges"},
+		{Id: privilegeconstants.CreateQuestionnaire},
+		{Id: privilegeconstants.EditQuestionnaire},
+		{Id: privilegeconstants.DeleteQuestion},
+		{Id: privilegeconstants.ViewQuestionnaire},
+		{Id: privilegeconstants.ViewQuestionnaireInstances, CanSetOnQuestionnaire: true},
+		{Id: privilegeconstants.CreateQuestion},
+		{Id: privilegeconstants.EditQuestion},
+		{Id: privilegeconstants.DeleteQuestion},
+		{Id: privilegeconstants.ViewQuestion},
+		{Id: privilegeconstants.AssignRole},
+		{Id: privilegeconstants.ManagePrivileges},
 	}
 
 	// Loop through the privileges and add them if they do not exist

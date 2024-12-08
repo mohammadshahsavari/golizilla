@@ -7,6 +7,7 @@ import (
 	"golizilla/core/service"
 	"golizilla/internal/apperrors"
 	"golizilla/internal/logmessages"
+	privilegeconstants "golizilla/internal/privilege"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -15,11 +16,13 @@ import (
 
 type CoreHandler struct {
 	coreService service.ICoreService
+	roleService service.IRoleService
 }
 
-func NewCoreHandler(coreService service.ICoreService) *CoreHandler {
+func NewCoreHandler(coreService service.ICoreService, roleService service.IRoleService) *CoreHandler {
 	return &CoreHandler{
 		coreService: coreService,
+		roleService: roleService,
 	}
 }
 
@@ -37,6 +40,21 @@ func (h *CoreHandler) StartHandler(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
+	hasPrivilege, err := h.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), req.UserID, req.QuestionnaireID, privilegeconstants.StartQuestionnariInsance)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: err.Error(),
+		})
+		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
+	}
+	if !hasPrivilege {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: logmessages.LogLackOfAuthorization,
+		})
+		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrLackOfAuthorization.Error())
+	}
 	// Call core service to start questionnaire
 	submissionID, question, err := h.coreService.Start(ctx, c.UserContext(), req.UserID, req.QuestionnaireID)
 	if err != nil {

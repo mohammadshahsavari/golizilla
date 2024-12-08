@@ -12,4 +12,5 @@ const (
 	ViewQuestion               string = "ViewQuestion"
 	AssignRole                 string = "AssignRole"
 	ManagePrivileges           string = "ManagePrivileges"
+	StartQuestionnari          string = "StartQuestionnari"
 )

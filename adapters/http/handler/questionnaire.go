@@ -407,6 +407,15 @@ func (q *QuestionnaireHandler) GiveAcess(c *fiber.Ctx) error {
 
 func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {
 	ctx := context.Background()
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: logmessages.LogCastUserIdError,
+		})
+		c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", apperrors.ErrInvalidUserID.Error())))
+		return
+	}
 
 	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
 		Service: logmessages.LogQuestionnaireHandler,
@@ -422,6 +431,34 @@ func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {
 		})
 		c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
 		return
+	}
+	isOwner, err := q.questionnaireService.IsOwner(ctx, nil, userID, id)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: err.Error(),
+		})
+		c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
+		return
+	}
+	if !isOwner {
+		hasPrivilege, err := q.roleService.HasPrivilegesOnInsance(ctx, nil, userID, id, privilegeconstants.SeeResultsOnInstance)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
+			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
+			return
+		}
+		if !hasPrivilege {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: logmessages.LogLackOfAuthorization,
+			})
+			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", apperrors.ErrLackOfAuthorization.Error())))
+			return
+		}
 	}
 	_, err = q.questionnaireService.GetById(context.Background(), nil, id)
 	if err != nil {

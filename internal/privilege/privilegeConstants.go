@@ -14,4 +14,5 @@ const (
 	StartQuestionnariInsance    string = "StartQuestionnariInstances"
 	ViewQuestionnaireInstances  string = "ViewQuestionnaireInstances"
 	UpdateQuestionnaireInstance string = "UpdateQuestionnaireInstance"
+	SeeResultsOnInstance        string = "SeeResultsOnInstance"
 )

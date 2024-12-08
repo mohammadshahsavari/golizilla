@@ -169,6 +169,22 @@ func (q *QuestionnaireHandler) Update(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
+	hasPrivilege, err := q.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), id, request.ID, privilegeconstants.UpdateQuestionnaireInstance)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: err.Error(),
+		})
+		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
+	}
+	if !hasPrivilege {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: logmessages.LogLackOfAuthorization,
+		})
+		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrLackOfAuthorization.Error())
+	}
+
 	// Map fields to update
 	updateFields := request.ToDomain()
 

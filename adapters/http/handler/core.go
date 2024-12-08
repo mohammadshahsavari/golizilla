@@ -40,7 +40,7 @@ func (h *CoreHandler) StartHandler(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	hasPrivilege, err := h.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), req.UserID, req.QuestionnaireID, privilegeconstants.StartQuestionnari)
+	hasPrivilege, err := h.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), req.UserID, req.QuestionnaireID, privilegeconstants.StartQuestionnariInsance)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,

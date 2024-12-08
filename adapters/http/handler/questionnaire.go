@@ -8,6 +8,7 @@ import (
 	"golizilla/core/service"
 	"golizilla/internal/apperrors"
 	"golizilla/internal/logmessages"
+	privilegeconstants "golizilla/internal/privilege"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -228,7 +229,31 @@ func (q *QuestionnaireHandler) GetById(c *fiber.Ctx) error {
 		})
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
-
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: logmessages.LogCastUserIdError,
+		})
+		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
+	}
+	if questionnaire.Anonymous {
+		hasPrivilege, err := q.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), userID, questionnaire.Id, privilegeconstants.ViewQuestionnaireInstances)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
+			return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
+		}
+		if !hasPrivilege {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: logmessages.LogLackOfAuthorization,
+			})
+			return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrLackOfAuthorization.Error())
+		}
+	}
 	err = presenter.Send(c, fiber.StatusOK, true, "", presenter.NewGetQuestionnaireResponse(questionnaire), nil)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -338,6 +363,7 @@ func (q *QuestionnaireHandler) GiveAcess(c *fiber.Ctx) error {
 		})
 		return presenter.SendError(c, fiber.StatusBadRequest, apperrors.ErrInvalidInput.Error())
 	}
+
 	role, err := q.roleService.GetRoleByUserId(ctx, c.UserContext(), userID)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{

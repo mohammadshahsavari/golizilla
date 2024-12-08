@@ -84,6 +84,7 @@ var (
 	LogAnswerDeleteSuccessfully  = "answer Deleted successfully"
 	LogAnswerGetByIDSuccessfully = "answer Got ByID successfully"
 
-	LogCastUserIdError = "failed to cast user id"
+	LogCastUserIdError     = "failed to cast user id"
+	LogLackOfAuthorization = "Lack Of Authorization"
 	// Add more as needed
 )

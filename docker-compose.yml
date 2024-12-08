@@ -53,7 +53,7 @@ services:
 
   golizilla-log-server:
     build:
-      context: ./persistence/logger/server
+      context: ./adapters/persistence/logger/server
     container_name: golizilla-log-server
     # ports:
     #   - "5000:${LOGGER_PORT}"

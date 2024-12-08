@@ -16,6 +16,7 @@ type IRoleService interface {
 	GetRoleByUserId(ctx context.Context, userCtx context.Context, userId uuid.UUID) (*model.Role, error)
 	HasPrivileges(ctx context.Context, userCtx context.Context, id uuid.UUID, privileges ...string) (bool, error)
 	AddPrivilegeOnInstance(ctx context.Context, userCtx context.Context, roleId uuid.UUID, questionnaireId uuid.UUID, privileges ...string) error
+	HasPrivilegesOnInsance(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID, privileges ...string) (bool, error)
 }
 
 type roleService struct {
@@ -119,4 +120,19 @@ func (s *roleService) HasPrivileges(ctx context.Context, userCtx context.Context
 	} else {
 		return false, nil
 	}
+}
+
+func (s *roleService) HasPrivilegesOnInsance(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID, privileges ...string) (bool, error) {
+	user, err := s.userRepo.FindByID(ctx, userCtx, userId)
+	if err != nil {
+		//log
+		return false, err
+	}
+	hasPrivilege, err := s.rolePrivilegeOnInstanceRepo.HasPrivilegesOnInsance(ctx, userCtx, user.RoleId, questionnariId, privileges...)
+	if err != nil {
+		//log
+		return false, err
+	}
+
+	return hasPrivilege, err
 }

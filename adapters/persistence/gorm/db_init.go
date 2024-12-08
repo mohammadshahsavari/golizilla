@@ -105,6 +105,7 @@ func createPrivileges(db *gorm.DB) error {
 		{Id: privilegeconstants.EditQuestionnaire},
 		{Id: privilegeconstants.DeleteQuestion},
 		{Id: privilegeconstants.ViewQuestionnaire},
+		{Id: privilegeconstants.ViewQuestionnaireInstances, CanSetOnQuestionnaire: true},
 		{Id: privilegeconstants.CreateQuestion},
 		{Id: privilegeconstants.EditQuestion},
 		{Id: privilegeconstants.DeleteQuestion},

@@ -31,7 +31,7 @@ func NewEmailService(cfg *config.Config) IEmailService {
 	return &EmailService{
 		cfg:         cfg,
 		auth:        auth,
-		templateDir: "./template",
+		templateDir: "./internal/email/template",
 	}
 }
 

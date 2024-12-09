@@ -84,6 +84,14 @@ var (
 	LogAnswerDeleteSuccessfully  = "answer Deleted successfully"
 	LogAnswerGetByIDSuccessfully = "answer Got ByID successfully"
 
+	// admin
+	LogAdminHandler          = "Admin_handler"
+	LogAdminService          = "admin_service"
+	LogAdminRepository       = "admin_repository"
+	LogAdminModel            = "admin_model"
+	_                        = ""
+	LogAdminGetAllUsersBegin = "starting admin GetAllUsers"
+
 	LogCastUserIdError     = "failed to cast user id"
 	LogLackOfAuthorization = "Lack Of Authorization"
 	// Add more as needed

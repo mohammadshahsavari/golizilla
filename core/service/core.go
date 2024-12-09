@@ -166,6 +166,14 @@ func (c *CoreService) Back(ctx context.Context, userCtx context.Context, submiss
 			return nil, err
 		}
 
+		questionnare, err := c.questionnaireRepo.GetById(ctx, userCtx, submission.QuestionnaireId)
+		if err != nil {
+			return nil, err
+		}
+		if !questionnare.BackCompatible {
+			return nil, apperrors.ErrBackIsNotAllowed
+		}
+
 		questions, err := c.getQuestionsForQuestionnaire(ctx, userCtx, submission.QuestionnaireId)
 		if err != nil {
 			return nil, err

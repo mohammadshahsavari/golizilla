@@ -27,5 +27,6 @@ var (
 	ErrQuestionsNotFound       = errors.New("no questions available")
 	ErrQuestionnaireNotFound   = errors.New("questionnaire not found")
 	ErrSubmissionLimit         = errors.New("out of submission limit")
+	ErrBackIsNotAllowed        = errors.New("back is not allowed")
 	// Add more as needed
 )

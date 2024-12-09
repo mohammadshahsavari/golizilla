@@ -162,6 +162,9 @@ func (h *CoreHandler) BackHandler(c *fiber.Ctx) error {
 			Service: logmessages.LogQuestionnaireHandler,
 			Message: err.Error(),
 		})
+		if errors.Is(err, apperrors.ErrBackIsNotAllowed) {
+			presenter.SendError(c, fiber.StatusMethodNotAllowed, apperrors.ErrBackIsNotAllowed.Error())
+		}
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 

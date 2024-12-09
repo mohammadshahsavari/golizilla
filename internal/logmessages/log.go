@@ -3,10 +3,11 @@ package logmessages
 // Define error constants
 var (
 	// User
-	LogUserHandler                          = "user_handler"
-	LogUserService                          = "user_service"
-	LogUserRepository                       = "user_repository"
-	LogUserModel                            = "user_model"
+	LogUserHandler    = "user_handler"
+	LogUserService    = "user_service"
+	LogUserRepository = "user_repository"
+	LogUserModel      = "user_model"
+
 	_                                       = ""
 	LogUserLoginSuccessful                  = "user logged in successfully"
 	LogUserGetProfileSuccessful             = "profile fetched successfully"
@@ -32,6 +33,7 @@ var (
 	LogUserVerifySignupSuccessful           = "user signed up successfully"
 	LogUserCreateBegin                      = "starting create user"
 	LogUserCreateSuccessful                 = "user created successfully"
+	LogUserNotFound                         = "user not found"
 
 	// Questionnaire
 	LogQuestionnaireHandler                = "questionnaire_handler"
@@ -86,5 +88,14 @@ var (
 
 	LogCastUserIdError     = "failed to cast user id"
 	LogLackOfAuthorization = "Lack Of Authorization"
+
+	// role
+	LogRoleService  = "roler_service"
+	_               = ""
+	LogRoleNotFound = "role not found"
+
+	// role privilege on instance
+	LogRolePrivilegeOnInstance = "rolePrivilegeOnInstace_repository"
+
 	// Add more as needed
 )

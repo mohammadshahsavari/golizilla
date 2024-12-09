@@ -22,5 +22,7 @@ var (
 	ErrInvalidUserID           = errors.New("invalid user ID in token")
 	ErrInvalidUserDateOfBirth  = errors.New("invalid user date of birth")
 	ErrLackOfAuthorization     = errors.New("you are not authorized to do this")
+	ErrQuestionsNotFound       = errors.New("no questions available")
+	ErrQuestionnaireNotFound   = errors.New("questionnaire not found")
 	// Add more as needed
 )

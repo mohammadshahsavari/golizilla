@@ -6,6 +6,7 @@ import (
 	"golizilla/adapters/persistence/logger"
 	"golizilla/core/domain/model"
 	"golizilla/core/port/repository"
+	"golizilla/internal/apperrors"
 	logmessages "golizilla/internal/logmessages"
 
 	"github.com/google/uuid"
@@ -52,9 +53,9 @@ func (c *CoreService) Start(ctx context.Context, userCtx context.Context, userID
 	if qn == nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireService,
-			Message: "questionnaire not found",
+			Message: apperrors.ErrQuestionnaireNotFound.Error(),
 		})
-		return uuid.Nil, nil, fmt.Errorf("questionnaire not found")
+		return uuid.Nil, nil, apperrors.ErrQuestionnaireNotFound
 	}
 
 	// Create new submission
@@ -83,9 +84,9 @@ func (c *CoreService) Start(ctx context.Context, userCtx context.Context, userID
 	if len(questions) == 0 {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireService,
-			Message: "no questions available",
+			Message: apperrors.ErrQuestionsNotFound.Error(),
 		})
-		return submission.ID, nil, fmt.Errorf("no questions available")
+		return submission.ID, nil, apperrors.ErrQuestionsNotFound
 	}
 
 	submission.CurrentQuestionIndex = 0

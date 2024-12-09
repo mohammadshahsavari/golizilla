@@ -4,6 +4,7 @@ import (
 	"context"
 	"golizilla/core/domain/model"
 	respository "golizilla/core/port/repository"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -15,6 +16,7 @@ type IQuestionnaireService interface {
 	GetById(ctx context.Context, userCtx context.Context, id uuid.UUID) (*model.Questionnaire, error)
 	GetByOwnerId(ctx context.Context, userCtx context.Context, ownerId uuid.UUID) ([]model.Questionnaire, error)
 	IsOwner(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID) (bool, error)
+	IsQuestionnaireActive(ctx context.Context, userCtx context.Context, questionnaireID uuid.UUID) (bool, error)
 }
 
 type questionnaireService struct {
@@ -56,4 +58,15 @@ func (q *questionnaireService) GetByOwnerId(ctx context.Context, userCtx context
 
 func (q *questionnaireService) IsOwner(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID) (bool, error) {
 	return q.repo.IsOwner(ctx, userCtx, userId, questionnariId)
+}
+
+func (q *questionnaireService) IsQuestionnaireActive(ctx context.Context, userCtx context.Context, questionnaireID uuid.UUID) (bool, error) {
+	questionnaire, err := q.repo.GetById(ctx, userCtx, questionnaireID)
+	if err != nil {
+		return false, err // Handles not found and other errors
+	}
+
+	currentTime := time.Now()
+	isActive := currentTime.After(questionnaire.StartTime) && currentTime.Before(questionnaire.EndTime)
+	return isActive, nil
 }

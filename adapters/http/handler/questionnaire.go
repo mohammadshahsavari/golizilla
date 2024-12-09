@@ -374,7 +374,21 @@ func (q *QuestionnaireHandler) GiveAcess(c *fiber.Ctx) error {
 	}
 
 	if !isOwner {
-		return presenter.SendError(c, fiber.StatusInternalServerError, "you arent owner of this questionnari")
+		hasPrivilege, err := q.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), userID, id, privilegeconstants.GiveAccessToOthersOnInstance)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
+			return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
+		}
+		if !hasPrivilege {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: logmessages.LogLackOfAuthorization,
+			})
+			return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrLackOfAuthorization.Error())
+		}
 	}
 	var request presenter.GiveAcessRequest
 	if err := c.BodyParser(&request); err != nil {

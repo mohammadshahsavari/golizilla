@@ -16,6 +16,7 @@ type CreateQuestionnaireRequest struct {
 	Title          string        `json:"title"`
 	AnswerTime     time.Duration `json:"answer_time"`
 	Anonymous      bool          `json:"anonymous"`
+	SubmitLimit    uint          `json:"submit_limit,omitempty"`
 	//TODO: Questions
 }
 

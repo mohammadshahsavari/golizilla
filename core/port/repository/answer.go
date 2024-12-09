@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	myContext "golizilla/adapters/http/handler/context"
 	"golizilla/core/domain/model"
@@ -32,10 +33,34 @@ func (r *AnswerRepository) Create(ctx context.Context, userCtx context.Context, 
 	if db = myContext.GetDB(userCtx); db == nil {
 		db = r.db
 	}
-	result := db.WithContext(ctx).Create(answer)
-	if result.Error != nil {
-		return uuid.Nil, fmt.Errorf("failed to create answer: %w", result.Error)
+
+	// Check if a record with the same QuestionID and SubmissionID exists
+	var existingAnswer model.Answer
+	err := db.WithContext(ctx).
+		Where("question_id = ? AND user_submission_id = ?", answer.QuestionID, answer.UserSubmissionID).
+		First(&existingAnswer).Error
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return uuid.Nil, fmt.Errorf("failed to query existing answer: %w", err)
 	}
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// No existing record, create a new one
+		result := db.WithContext(ctx).Create(answer)
+		if result.Error != nil {
+			return uuid.Nil, fmt.Errorf("failed to create answer: %w", result.Error)
+		}
+	} else {
+		// Update the existing record
+		existingAnswer.Descriptive = answer.Descriptive
+		existingAnswer.Text = answer.Text // Update any other fields as needed
+		result := db.WithContext(ctx).Save(&existingAnswer)
+		if result.Error != nil {
+			return uuid.Nil, fmt.Errorf("failed to update answer: %w", result.Error)
+		}
+		return existingAnswer.ID, nil
+	}
+
 	return answer.ID, nil
 }
 

@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"golizilla/adapters/persistence/logger"
 	"golizilla/core/domain/model"
 	"golizilla/core/port/repository"
+	logmessages "golizilla/internal/logmessages"
 	"time"
 
 	"github.com/google/uuid"
@@ -125,12 +127,18 @@ func (s *roleService) HasPrivileges(ctx context.Context, userCtx context.Context
 func (s *roleService) HasPrivilegesOnInsance(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID, privileges ...string) (bool, error) {
 	user, err := s.userRepo.FindByID(ctx, userCtx, userId)
 	if err != nil {
-		//log
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogRoleService,
+			Message: logmessages.LogUserNotFound,
+		})
 		return false, err
 	}
 	hasPrivilege, err := s.rolePrivilegeOnInstanceRepo.HasPrivilegesOnInsance(ctx, userCtx, user.RoleId, questionnariId, privileges...)
 	if err != nil {
-		//log
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogRoleService,
+			Message: logmessages.LogRoleNotFound,
+		})
 		return false, err
 	}
 

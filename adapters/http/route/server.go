@@ -77,7 +77,7 @@ func RunServer(cfg *config.Config, database *gorm.DB) {
 	SetupQuestionnaireRoutes(app, database, cfg, questionnaireService, authorizationsService, roleService)
 	SetupQuestionRoutes(app, database, cfg, questionService)
 	SetupAnswerRoutes(app, database, cfg, answerService)
-	SetupCoreRoutes(app, database, cfg, coreService, roleService)
+	SetupCoreRoutes(app, database, cfg, coreService, roleService, questionnaireService)
 
 	// Start the server
 	host := cfg.Host

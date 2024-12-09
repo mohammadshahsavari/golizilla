@@ -91,6 +91,9 @@ func (h *CoreHandler) StartHandler(c *fiber.Ctx) error {
 		if errors.Is(err, apperrors.ErrQuestionsNotFound) {
 			return presenter.SendError(c, fiber.StatusNotFound, apperrors.ErrQuestionsNotFound.Error())
 		}
+		if errors.Is(err, apperrors.ErrSubmissionLimit) {
+			return presenter.SendError(c, fiber.StatusForbidden, apperrors.ErrSubmissionLimit.Error())
+		}
 		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
 	}
 

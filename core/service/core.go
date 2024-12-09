@@ -45,17 +45,37 @@ func (c *CoreService) Start(ctx context.Context, userCtx context.Context, userID
 	qn, err := c.questionnaireRepo.GetById(ctx, userCtx, questionnaireID)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
-			Service: logmessages.LogQuestionnaireService,
+			Service: logmessages.LogCoreService,
 			Message: fmt.Sprintf("failed to get questionnaire: %v", err.Error()),
 		})
 		return uuid.Nil, nil, fmt.Errorf("failed to get questionnaire: %w", err)
 	}
 	if qn == nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
-			Service: logmessages.LogQuestionnaireService,
+			Service: logmessages.LogCoreService,
 			Message: apperrors.ErrQuestionnaireNotFound.Error(),
 		})
 		return uuid.Nil, nil, apperrors.ErrQuestionnaireNotFound
+	}
+
+	// check limit on submission
+	if qn.SubmitLimit != 0 {
+
+		submitCountOk, err := c.submissionRepo.SubmitCount(ctx, userCtx, userID, questionnaireID, qn.SubmitLimit)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogCoreService,
+				Message: fmt.Sprintf("failed to get submit count: %v", err.Error()),
+			})
+			return uuid.Nil, nil, fmt.Errorf("failed to get submit count: %w", err)
+		}
+		if !submitCountOk {
+			logger.GetLogger().LogWarningFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogCoreService,
+				Message: apperrors.ErrSubmissionLimit.Error(),
+			})
+			return uuid.Nil, nil, apperrors.ErrSubmissionLimit
+		}
 	}
 
 	// Create new submission
@@ -67,7 +87,7 @@ func (c *CoreService) Start(ctx context.Context, userCtx context.Context, userID
 	}
 	if err := c.submissionRepo.CreateSubmission(ctx, userCtx, submission); err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
-			Service: logmessages.LogQuestionnaireService,
+			Service: logmessages.LogCoreService,
 			Message: fmt.Sprintf("failed to create submission: %v", err.Error()),
 		})
 		return uuid.Nil, nil, err
@@ -76,14 +96,14 @@ func (c *CoreService) Start(ctx context.Context, userCtx context.Context, userID
 	questions, err := c.getQuestionsForQuestionnaire(ctx, userCtx, questionnaireID)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
-			Service: logmessages.LogQuestionnaireService,
+			Service: logmessages.LogCoreService,
 			Message: fmt.Sprintf("failed to get questions: %v", err.Error()),
 		})
 		return uuid.Nil, nil, err
 	}
 	if len(questions) == 0 {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
-			Service: logmessages.LogQuestionnaireService,
+			Service: logmessages.LogCoreService,
 			Message: apperrors.ErrQuestionsNotFound.Error(),
 		})
 		return submission.ID, nil, apperrors.ErrQuestionsNotFound
@@ -92,7 +112,7 @@ func (c *CoreService) Start(ctx context.Context, userCtx context.Context, userID
 	submission.CurrentQuestionIndex = 0
 	if err := c.submissionRepo.UpdateSubmission(ctx, userCtx, submission); err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
-			Service: logmessages.LogQuestionnaireService,
+			Service: logmessages.LogCoreService,
 			Message: fmt.Sprintf("failed to update submission: %v", err.Error()),
 		})
 		return submission.ID, nil, err

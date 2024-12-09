@@ -1,6 +1,8 @@
 package apperrors
 
-import "errors"
+import (
+	"errors"
+)
 
 // Define error constants
 var (
@@ -24,5 +26,6 @@ var (
 	ErrLackOfAuthorization     = errors.New("you are not authorized to do this")
 	ErrQuestionsNotFound       = errors.New("no questions available")
 	ErrQuestionnaireNotFound   = errors.New("questionnaire not found")
+	ErrSubmissionLimit         = errors.New("out of submission limit")
 	// Add more as needed
 )

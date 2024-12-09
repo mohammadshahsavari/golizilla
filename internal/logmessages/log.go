@@ -97,5 +97,11 @@ var (
 	// role privilege on instance
 	LogRolePrivilegeOnInstance = "rolePrivilegeOnInstace_repository"
 
+	// core
+	LogCoreService = "core_service"
+
+	// submission
+	LogSubmitRepo = "submission_repository"
+
 	// Add more as needed
 )

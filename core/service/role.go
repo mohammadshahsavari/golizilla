@@ -18,6 +18,7 @@ type IRoleService interface {
 	GetRoleByUserId(ctx context.Context, userCtx context.Context, userId uuid.UUID) (*model.Role, error)
 	HasPrivileges(ctx context.Context, userCtx context.Context, id uuid.UUID, privileges ...string) (bool, error)
 	AddPrivilegeOnInstance(ctx context.Context, userCtx context.Context, roleId uuid.UUID, questionnaireId uuid.UUID, privileges ...string) error
+	DeletePrivilegeOnInstance(ctx context.Context, userCtx context.Context, roleId uuid.UUID, questionnaireId uuid.UUID, privileges ...string) error
 	HasPrivilegesOnInsance(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID, privileges ...string) (bool, error)
 }
 
@@ -76,6 +77,16 @@ func (s *roleService) AddPrivilegeOnInstance(ctx context.Context, userCtx contex
 			QuestionnaireId: questionnaireId,
 		}
 		if err := s.rolePrivilegeOnInstanceRepo.Add(ctx, userCtx, rolePrivilegeOnInstance); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *roleService) DeletePrivilegeOnInstance(ctx context.Context, userCtx context.Context, roleId uuid.UUID, questionnaireId uuid.UUID, privileges ...string) error {
+	for _, privilege := range privileges {
+		if err := s.rolePrivilegeOnInstanceRepo.Delete(ctx, userCtx, roleId, privilege, questionnaireId); err != nil {
 			return err
 		}
 	}

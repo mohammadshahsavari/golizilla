@@ -1,6 +1,8 @@
 package apperrors
 
-import "errors"
+import (
+	"errors"
+)
 
 // Define error constants
 var (
@@ -22,5 +24,9 @@ var (
 	ErrInvalidUserID           = errors.New("invalid user ID in token")
 	ErrInvalidUserDateOfBirth  = errors.New("invalid user date of birth")
 	ErrLackOfAuthorization     = errors.New("you are not authorized to do this")
+	ErrQuestionsNotFound       = errors.New("no questions available")
+	ErrQuestionnaireNotFound   = errors.New("questionnaire not found")
+	ErrSubmissionLimit         = errors.New("out of submission limit")
+	ErrBackIsNotAllowed        = errors.New("back is not allowed")
 	// Add more as needed
 )

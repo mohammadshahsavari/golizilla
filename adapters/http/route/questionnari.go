@@ -47,4 +47,5 @@ func SetupQuestionnaireRoutes(
 
 	questionnaireGroup.Post("/GiveAcess/:id", authMiddleware, questionnaireHandler.GiveAcess)
 
+	questionnaireGroup.Post("/DeleteAcess/:id", authMiddleware, questionnaireHandler.DeleteAcess)
 }

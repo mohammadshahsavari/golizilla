@@ -11,10 +11,10 @@ import (
 )
 
 func SetupCoreRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config,
-	coreService service.ICoreService, roleService service.IRoleService) { // pass the service as a param or create inside
+	coreService service.ICoreService, roleService service.IRoleService, questionnaireService service.IQuestionnaireService) { // pass the service as a param or create inside
 	coreGroup := app.Group("/core")
 
-	coreHandler := handler.NewCoreHandler(coreService, roleService)
+	coreHandler := handler.NewCoreHandler(coreService, roleService, questionnaireService)
 
 	// Add authentication middleware if needed
 	coreGroup.Use(middleware.AuthMiddleware(cfg))

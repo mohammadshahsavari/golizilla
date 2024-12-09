@@ -15,14 +15,16 @@ import (
 )
 
 type CoreHandler struct {
-	coreService service.ICoreService
-	roleService service.IRoleService
+	coreService          service.ICoreService
+	roleService          service.IRoleService
+	questionnaireService service.IQuestionnaireService
 }
 
-func NewCoreHandler(coreService service.ICoreService, roleService service.IRoleService) *CoreHandler {
+func NewCoreHandler(coreService service.ICoreService, roleService service.IRoleService, questionnaireService service.IQuestionnaireService) *CoreHandler {
 	return &CoreHandler{
-		coreService: coreService,
-		roleService: roleService,
+		coreService:          coreService,
+		roleService:          roleService,
+		questionnaireService: questionnaireService,
 	}
 }
 
@@ -37,15 +39,19 @@ func (h *CoreHandler) StartHandler(c *fiber.Ctx) error {
 	// Parse and validate request
 	req := &presenter.StartRequest{}
 	if err := req.ParseAndValidate(c); err != nil {
-		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
+		return presenter.SendError(c, fiber.StatusUnprocessableEntity, err.Error())
 	}
 
+	// Check if the user has privileges to start the questionnaire
 	hasPrivilege, err := h.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), req.UserID, req.QuestionnaireID, privilegeconstants.StartQuestionnariInsance)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
 			Message: err.Error(),
 		})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return presenter.SendError(c, fiber.StatusNotFound, "questionnaire not found")
+		}
 		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
 	}
 	if !hasPrivilege {
@@ -53,8 +59,25 @@ func (h *CoreHandler) StartHandler(c *fiber.Ctx) error {
 			Service: logmessages.LogQuestionnaireHandler,
 			Message: logmessages.LogLackOfAuthorization,
 		})
-		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrLackOfAuthorization.Error())
+		return presenter.SendError(c, fiber.StatusForbidden, apperrors.ErrLackOfAuthorization.Error())
 	}
+
+	// Check if the questionnaire is active
+	isActive, err := h.questionnaireService.IsQuestionnaireActive(ctx, c.UserContext(), req.QuestionnaireID)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogQuestionnaireHandler,
+			Message: err.Error(),
+		})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return presenter.SendError(c, fiber.StatusNotFound, apperrors.ErrQuestionnaireNotFound.Error())
+		}
+		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
+	}
+	if !isActive {
+		return presenter.SendError(c, fiber.StatusBadRequest, "questionnaire is not active at this time")
+	}
+
 	// Call core service to start questionnaire
 	submissionID, question, err := h.coreService.Start(ctx, c.UserContext(), req.UserID, req.QuestionnaireID)
 	if err != nil {
@@ -63,7 +86,13 @@ func (h *CoreHandler) StartHandler(c *fiber.Ctx) error {
 			Message: err.Error(),
 		})
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return presenter.SendError(c, fiber.StatusNotFound, "questionnaire not found")
+			return presenter.SendError(c, fiber.StatusNotFound, apperrors.ErrQuestionnaireNotFound.Error())
+		}
+		if errors.Is(err, apperrors.ErrQuestionsNotFound) {
+			return presenter.SendError(c, fiber.StatusNotFound, apperrors.ErrQuestionsNotFound.Error())
+		}
+		if errors.Is(err, apperrors.ErrSubmissionLimit) {
+			return presenter.SendError(c, fiber.StatusForbidden, apperrors.ErrSubmissionLimit.Error())
 		}
 		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
 	}
@@ -133,6 +162,9 @@ func (h *CoreHandler) BackHandler(c *fiber.Ctx) error {
 			Service: logmessages.LogQuestionnaireHandler,
 			Message: err.Error(),
 		})
+		if errors.Is(err, apperrors.ErrBackIsNotAllowed) {
+			presenter.SendError(c, fiber.StatusMethodNotAllowed, apperrors.ErrBackIsNotAllowed.Error())
+		}
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 

@@ -2,8 +2,11 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	appContext "golizilla/adapters/http/handler/context"
+	"golizilla/adapters/persistence/logger"
 	"golizilla/core/domain/model"
+	"golizilla/internal/logmessages"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -14,6 +17,7 @@ type ISubmissionRepository interface {
 	CreateSubmission(ctx context.Context, userCtx context.Context, submission *model.UserSubmission) error
 	UpdateSubmission(ctx context.Context, userCtx context.Context, submission *model.UserSubmission) error
 	GetActiveSubmissionByUserIDAndQuestionnaire(ctx context.Context, userCtx context.Context, userID, questionnaireID uuid.UUID) (*model.UserSubmission, error)
+	SubmitCount(ctx context.Context, userCtx context.Context, userID, questionnaireID uuid.UUID, submitLimit uint) (bool, error)
 	// Add any other needed methods, e.g., to get the current question index, etc.
 }
 
@@ -66,4 +70,27 @@ func (r *SubmissionRepository) GetActiveSubmissionByUserIDAndQuestionnaire(ctx c
 		return nil, err
 	}
 	return &sub, nil
+}
+
+func (r *SubmissionRepository) SubmitCount(ctx context.Context, userCtx context.Context, userID, questionnaireID uuid.UUID, submitLimit uint) (bool, error) {
+	db := appContext.GetDB(userCtx)
+	if db == nil {
+		db = r.db
+	}
+	var count int64
+	err := db.WithContext(ctx).Model(&model.UserSubmission{}).
+		Where("user_id = ? AND questionnaire_id = ?", userID, questionnaireID).
+		Count(&count).Error
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogSubmitRepo,
+			Message: "cant get submission count",
+		})
+		return false, err
+	}
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogSubmitRepo,
+		Message: fmt.Sprintf("submission count= %d submit limit= %d", count, submitLimit),
+	})
+	return count < int64(submitLimit), nil
 }

@@ -2,8 +2,11 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	myContext "golizilla/adapters/http/handler/context"
+	"golizilla/adapters/persistence/logger"
 	"golizilla/core/domain/model"
+	"golizilla/internal/logmessages"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -79,13 +82,19 @@ func (r *rolePrivilegeOnInstanceRepository) HasPrivilegesOnInsance(
 	}
 	var rolePrivilegeOnInstance []model.RolePrivilegeOnInstance
 	// Query matching both role_id and privilege_id
-	result := db.WithContext(ctx).Where("role_id = ? AND privilege_id IN ? AND questionnaire_id", roleId, privileges, questionnariId).Find(&rolePrivilegeOnInstance)
+	result := db.WithContext(ctx).Where("role_id = ? AND privilege_id IN (?) AND questionnaire_id = ?", roleId, privileges, questionnariId).Find(&rolePrivilegeOnInstance)
 
 	if result.Error != nil {
-		// Log the error if necessary
-		// log.Printf("Error fetching role privileges: %v", err)
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogRolePrivilegeOnInstance,
+			Message: "role privilege on instance not found",
+		})
 		return false, result.Error
 	}
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogRolePrivilegeOnInstance,
+		Message: fmt.Sprintf("rows=%d role_id=%s privileges=%s q_id=%s", result.RowsAffected, roleId, privileges[0], questionnariId),
+	})
 
 	return result.RowsAffected > 0, result.Error
 }

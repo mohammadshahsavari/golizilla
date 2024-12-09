@@ -16,12 +16,20 @@ type CreateQuestionnaireRequest struct {
 	Title          string        `json:"title"`
 	AnswerTime     time.Duration `json:"answer_time"`
 	Anonymous      bool          `json:"anonymous"`
+	SubmitLimit    uint          `json:"submit_limit,omitempty"`
 	//TODO: Questions
 }
 
 type GiveAcessRequest struct {
-	UserID     uuid.UUID `json:"user_id"`
-	Privileges []string  `json:"privileges"`
+	UserIDs    []uuid.UUID `json:"user_ids"`
+	Privileges []string    `json:"privileges"`
+	AllUsers   bool        `json:"all_users"`
+}
+
+type DeleteAcessRequest struct {
+	UserIDs    []uuid.UUID `json:"user_ids"`
+	Privileges []string    `json:"privileges"`
+	AllUsers   bool        `json:"all_users"`
 }
 
 type UpdateQuestionnaireRequest struct {

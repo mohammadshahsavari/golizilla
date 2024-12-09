@@ -18,5 +18,6 @@ type Questionnaire struct {
 	AnswerTime         time.Duration `gorm:"not null"`
 	ParticipationCount uint
 	Anonymous          bool
+	SubmitLimit        uint
 	Owner              User `gorm:"foreinKey:OwnerId"`
 }

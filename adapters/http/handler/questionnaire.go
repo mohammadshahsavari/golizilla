@@ -20,14 +20,17 @@ import (
 type QuestionnaireHandler struct {
 	questionnaireService service.IQuestionnaireService
 	roleService          service.IRoleService
+	userService          service.IUserService
 }
 
 func NewQuestionnaireHandler(
 	questionnaireService service.IQuestionnaireService,
-	roleService service.IRoleService) *QuestionnaireHandler {
+	roleService service.IRoleService,
+	userService service.IUserService) *QuestionnaireHandler {
 	return &QuestionnaireHandler{
 		questionnaireService: questionnaireService,
 		roleService:          roleService,
+		userService:          userService,
 	}
 }
 
@@ -398,6 +401,13 @@ func (q *QuestionnaireHandler) GiveAcess(c *fiber.Ctx) error {
 				Message: err.Error(),
 			})
 			return presenter.SendError(c, fiber.StatusBadRequest, "failed to add privilges on instance")
+		}
+		err = q.userService.CreateNotification(ctx, c.UserContext(), user, fmt.Sprintf("Your role changed. permissions added : %v", request.Privileges))
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
 		}
 	}
 

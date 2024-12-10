@@ -360,7 +360,7 @@ func (q *QuestionnaireHandler) GiveAcess(c *fiber.Ctx) error {
 		})
 		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
 	}
-	isOwner, err := q.questionnaireService.IsOwner(ctx, c.UserContext(), id, userID)
+	isOwner, err := q.questionnaireService.IsOwner(ctx, c.UserContext(), userID, id)
 	if err != nil {
 		if err == apperrors.ErrQuestionsNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -460,7 +460,7 @@ func (q *QuestionnaireHandler) DeleteAcess(c *fiber.Ctx) error {
 		})
 		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
 	}
-	isOwner, err := q.questionnaireService.IsOwner(ctx, c.UserContext(), id, userID)
+	isOwner, err := q.questionnaireService.IsOwner(ctx, c.UserContext(), userID, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
@@ -504,7 +504,14 @@ func (q *QuestionnaireHandler) DeleteAcess(c *fiber.Ctx) error {
 				Service: logmessages.LogQuestionnaireHandler,
 				Message: err.Error(),
 			})
-			return presenter.SendError(c, fiber.StatusBadRequest, "failed to add privilges on instance")
+			return presenter.SendError(c, fiber.StatusBadRequest, "failed to delelte privilges on instance")
+		}
+		err = q.userService.CreateNotification(ctx, c.UserContext(), user, fmt.Sprintf("Your role changed. permissions deleted : %v", request.Privileges))
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
 		}
 	}
 
@@ -615,15 +622,19 @@ func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {
 
 			for _, answer := range qustion.Answers {
 				if answer.Descriptive {
-					c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("qustion is : %v", answer.Text)))
+					c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("answer is : %v", *answer.Text)))
 				} else {
-					c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("qustion is : %v", answer.Question.Index)))
+					for _, option := range qustion.Options {
+						if option.ID == answer.QuestionID {
+							c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("selected answer is : %v", option.Index)))
+						}
+					}
 				}
 			}
 		}
 		if lastValue != questionnaire.ParticipationCount {
 			lastValue = questionnaire.ParticipationCount
-			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%d", lastValue)))
+			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("ParticipationCount: %d", lastValue)))
 		}
 		time.Sleep(time.Second * 10)
 	}

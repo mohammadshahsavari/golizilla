@@ -9,10 +9,11 @@ import (
 )
 
 type CreateAnswerRequest struct {
-	QuestionID  uuid.UUID  `json:"question_id"`
-	Descriptive bool       `json:"descriptive"`
-	Text        *string    `json:"text,omitempty"`
-	OptionID    *uuid.UUID `json:"option_id,omitempty"`
+	QuestionID   uuid.UUID  `json:"question_id"`
+	Descriptive  bool       `json:"descriptive"`
+	Text         *string    `json:"text,omitempty"`
+	OptionID     *uuid.UUID `json:"option_id,omitempty"`
+	SubmissionID uuid.UUID  `json:"submission_id"`
 }
 
 // Validate ensures the incoming request has the correct fields set.
@@ -21,15 +22,25 @@ func (req *CreateAnswerRequest) Validate() error {
 		return errors.New("question_id cannot be empty")
 	}
 
+	if req.SubmissionID == uuid.Nil {
+		return errors.New("submission_id cannot be empty")
+	}
+
 	// If the answer is descriptive, Text should be provided
 	if req.Descriptive {
 		if req.Text == nil || *req.Text == "" {
 			return errors.New("text answer cannot be empty for a descriptive question")
 		}
+		if req.OptionID != nil {
+			return errors.New("option_id should be empty for a descriptive question")
+		}
 	} else {
 		// If not descriptive, we expect an OptionID to be chosen.
 		if req.OptionID == nil {
 			return errors.New("option_id is required for non-descriptive answer")
+		}
+		if req.Text != nil {
+			return errors.New("text should be empty for a descriptive question")
 		}
 	}
 	return nil
@@ -38,12 +49,12 @@ func (req *CreateAnswerRequest) Validate() error {
 // ToDomain transforms the request into a domain model Answer.
 // Note: You need to supply UserID and UserSubmissionID when calling this method
 // from your handler, since that context isn't in the request.
-func (req *CreateAnswerRequest) ToDomain(userID, submissionID uuid.UUID) *model.Answer {
+func (req *CreateAnswerRequest) ToDomain(userID uuid.UUID) *model.Answer {
 	return &model.Answer{
 		ID:               uuid.New(),
 		QuestionID:       req.QuestionID,
 		UserID:           userID,
-		UserSubmissionID: submissionID,
+		UserSubmissionID: req.SubmissionID,
 		Descriptive:      req.Descriptive,
 		Text:             req.Text,
 		OptionID:         req.OptionID,
@@ -88,6 +99,16 @@ func (req *UpdateAnswerRequest) Validate() error {
 	}
 	if !req.Descriptive && req.OptionID == nil {
 		return errors.New("option_id is required for non-descriptive answer")
+	}
+
+	if req.Descriptive {
+		if req.OptionID != nil {
+			return errors.New("option_id should be empty for a descriptive question")
+		}
+	} else {
+		if req.Text != nil {
+			return errors.New("text should be empty for a descriptive question")
+		}
 	}
 	return nil
 }

@@ -44,7 +44,7 @@ func (r *rolePrivilegeOnInstanceRepository) Delete(ctx context.Context, userCtx 
 	if db = myContext.GetDB(userCtx); db == nil {
 		db = r.db
 	}
-	err := db.WithContext(ctx).Delete(&model.RolePrivilegeOnInstance{
+	err := db.WithContext(ctx).Where("role_id = ? AND privilege_id = ? AND questionnaire_id =?", roleId, privilegeId, questionnaireId).Delete(&model.RolePrivilegeOnInstance{
 		RoleId:          roleId,
 		PrivilegeId:     privilegeId,
 		QuestionnaireId: questionnaireId,

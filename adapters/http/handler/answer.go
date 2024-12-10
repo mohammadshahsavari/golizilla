@@ -70,11 +70,7 @@ func (h *AnswerHandler) Create(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
 	}
 
-	// Suppose submission_id is also given in request or from c.Locals
-	// For a standalone answer, you must know which submission this answer belongs to.
-	submissionID := uuid.Nil // obtain from request or context if needed
-
-	answerDomain := request.ToDomain(userID, submissionID)
+	answerDomain := request.ToDomain(userID)
 	id, err := h.answerService.Create(c.Context(), c.UserContext(), answerDomain)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{

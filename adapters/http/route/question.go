@@ -18,22 +18,15 @@ func SetupQuestionRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, questi
 	questionHandler := handler.NewQuestionHandler(questionService)
 
 	// Initialize the JWT middleware with the config
-	authMiddleware := middleware.AuthMiddleware(cfg)
+	questionGroup.Use(middleware.AuthMiddleware(cfg))
+	questionGroup.Use(middleware.ContextMiddleware())
 
 	// Protected routes
-	questionGroup.Post("/create",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.Create)
+	questionGroup.Post("/create", questionHandler.Create)
 
-	questionGroup.Put("/update/:id",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.Update)
+	questionGroup.Put("/update/:id", questionHandler.Update)
 
-	questionGroup.Get("/:id",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.GetByID)
+	questionGroup.Get("/:id", questionHandler.GetByID)
 
-	questionGroup.Delete("/:id",
-		// middleware.SetTransaction(database.NewGormCommitter(db)),
-		authMiddleware, questionHandler.Delete)
+	questionGroup.Delete("/:id", questionHandler.Delete)
 }

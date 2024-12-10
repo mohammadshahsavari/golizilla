@@ -23,17 +23,12 @@ func SetupAnswerRoutes(
 	answerHandler := handler.NewAnswerHandler(answerService)
 
 	// Initialize the JWT middleware with the config
-	authMiddleware := middleware.AuthMiddleware(cfg)
+	answerGroup.Use(middleware.AuthMiddleware(cfg))
+	answerGroup.Use(middleware.ContextMiddleware())
 
 	// Protected routes
-	answerGroup.Post("/create",
-		authMiddleware, answerHandler.Create)
-
-	answerGroup.Put("/update/:id",
-		authMiddleware, answerHandler.Update)
-	answerGroup.Get("/:id",
-		authMiddleware, answerHandler.GetByID)
-
-	answerGroup.Delete("/:id",
-		authMiddleware, answerHandler.Delete)
+	answerGroup.Post("/create", answerHandler.Create)
+	answerGroup.Put("/update/:id", answerHandler.Update)
+	answerGroup.Get("/:id", answerHandler.GetByID)
+	answerGroup.Delete("/:id", answerHandler.Delete)
 }

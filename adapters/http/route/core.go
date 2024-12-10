@@ -19,6 +19,7 @@ func SetupCoreRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config,
 	// Add authentication middleware if needed
 	coreGroup.Use(middleware.AuthMiddleware(cfg))
 	coreGroup.Use(middleware.ContextMiddleware())
+	coreGroup.Use(middleware.CSRFProtection(cfg))
 
 	coreGroup.Get("/start/:questionnaire_id", coreHandler.StartHandler)
 	coreGroup.Post("/submit", coreHandler.SubmitHandler)

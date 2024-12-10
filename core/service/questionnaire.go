@@ -17,6 +17,7 @@ type IQuestionnaireService interface {
 	GetByOwnerId(ctx context.Context, userCtx context.Context, ownerId uuid.UUID) ([]model.Questionnaire, error)
 	IsOwner(ctx context.Context, userCtx context.Context, userId uuid.UUID, questionnariId uuid.UUID) (bool, error)
 	IsQuestionnaireActive(ctx context.Context, userCtx context.Context, questionnaireID uuid.UUID) (bool, error)
+	IsQuestionnaireAnonymous(ctx context.Context, userCtx context.Context, questionnaireID uuid.UUID) (bool, error)
 }
 
 type questionnaireService struct {
@@ -69,4 +70,13 @@ func (q *questionnaireService) IsQuestionnaireActive(ctx context.Context, userCt
 	currentTime := time.Now()
 	isActive := currentTime.After(questionnaire.StartTime) && currentTime.Before(questionnaire.EndTime)
 	return isActive, nil
+}
+
+func (q *questionnaireService) IsQuestionnaireAnonymous(ctx context.Context, userCtx context.Context, questionnaireID uuid.UUID) (bool, error) {
+	questionnaire, err := q.repo.GetById(ctx, userCtx, questionnaireID)
+	if err != nil {
+		return false, err // Handles not found and other errors
+	}
+
+	return questionnaire.Anonymous, nil
 }

@@ -8,6 +8,7 @@ import (
 	"golizilla/core/port/repository"
 	"golizilla/internal/apperrors"
 	logmessages "golizilla/internal/logmessages"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -18,6 +19,7 @@ type ICoreService interface {
 	Back(ctx context.Context, userCtx context.Context, submissionID uuid.UUID) (*model.Question, error)
 	Next(ctx context.Context, userCtx context.Context, submissionID uuid.UUID) (*model.Question, error)
 	End(ctx context.Context, userCtx context.Context, submissionID uuid.UUID) error
+	CheckExpire(ctx context.Context, userCtx context.Context, submissionID uuid.UUID) error
 }
 
 type CoreService struct {
@@ -122,13 +124,34 @@ func (c *CoreService) Start(ctx context.Context, userCtx context.Context, userID
 }
 
 func (c *CoreService) Submit(ctx context.Context, userCtx context.Context, submissionID, questionID uuid.UUID, answer *model.Answer) error {
+
 	submission, err := c.submissionRepo.GetSubmissionByID(ctx, userCtx, submissionID)
 	if err != nil {
 		return err
 	}
 
 	if submission.Status != model.SubmissionsStatusInProgress {
-		return fmt.Errorf("submission not in progress")
+		return apperrors.ErrSubmissionNotInProgress
+	}
+
+	qn, err := c.questionnaireRepo.GetById(ctx, userCtx, submission.QuestionnaireId)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogCoreService,
+			Message: fmt.Sprintf("failed to get questionnaire: %v", err.Error()),
+		})
+		return fmt.Errorf("failed to get questionnaire: %w", err)
+	}
+	if qn == nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogCoreService,
+			Message: apperrors.ErrQuestionnaireNotFound.Error(),
+		})
+		return apperrors.ErrQuestionnaireNotFound
+	}
+
+	if time.Since(submission.CreatedAt).Minutes() > float64(qn.AnswerTime) {
+		return apperrors.ErrQuestionnareExpired
 	}
 
 	questions, err := c.getQuestionsForQuestionnaire(ctx, userCtx, submission.QuestionnaireId)
@@ -136,12 +159,12 @@ func (c *CoreService) Submit(ctx context.Context, userCtx context.Context, submi
 		return err
 	}
 	if submission.CurrentQuestionIndex < 0 || submission.CurrentQuestionIndex >= len(questions) {
-		return fmt.Errorf("no current question")
+		return apperrors.ErrSubmissionNoQuestion
 	}
 
 	currentQuestion := questions[submission.CurrentQuestionIndex]
 	if currentQuestion.ID != questionID {
-		return fmt.Errorf("question does not match current index")
+		return apperrors.ErrSubmissionNotFoundQuestion
 	}
 
 	answer.QuestionID = questionID
@@ -223,4 +246,47 @@ func (c *CoreService) getQuestionsForQuestionnaire(ctx context.Context, userCtx 
 		return nil, fmt.Errorf("failed to get questions: %w", err)
 	}
 	return questions, nil
+}
+
+func (c *CoreService) CheckExpire(ctx context.Context, userCtx context.Context, submissionID uuid.UUID) error {
+
+	submission, err := c.submissionRepo.GetSubmissionByID(ctx, userCtx, submissionID)
+	if err != nil {
+		return err
+	}
+
+	if submission.Status != model.SubmissionsStatusInProgress {
+		return apperrors.ErrSubmissionNotInProgress
+	}
+
+	qn, err := c.questionnaireRepo.GetById(ctx, userCtx, submission.QuestionnaireId)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogCoreService,
+			Message: fmt.Sprintf("failed to get questionnaire: %v", err.Error()),
+		})
+		return fmt.Errorf("failed to get questionnaire: %w", err)
+	}
+	if qn == nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogCoreService,
+			Message: apperrors.ErrQuestionnaireNotFound.Error(),
+		})
+		return apperrors.ErrQuestionnaireNotFound
+	}
+
+	if time.Since(submission.CreatedAt.UTC()).Minutes() > float64(qn.AnswerTime) {
+		submission.Status = model.SubmissionsStatusDone
+		err := c.submissionRepo.UpdateSubmission(ctx, userCtx, submission)
+		if err != nil {
+			return err
+		}
+		logger.GetLogger().LogWarningFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogCoreService,
+			Message: fmt.Sprintf("After update: submissionID=%v, status=%v", submission.ID, submission.Status),
+		})
+		return apperrors.ErrQuestionnareExpired
+	}
+
+	return nil
 }

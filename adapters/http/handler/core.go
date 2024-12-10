@@ -152,6 +152,13 @@ func (h *CoreHandler) SubmitHandler(c *fiber.Ctx) error {
 	// Set user ID in the request
 	req.UserID = userID
 
+	if err := h.coreService.CheckExpire(ctx, c.UserContext(), req.SubmissionID); err != nil {
+		if errors.Is(err, apperrors.ErrQuestionnareExpired) {
+			return presenter.SendError(c, fiber.StatusForbidden, apperrors.ErrQuestionnareExpired.Error())
+		}
+		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
+	}
+
 	// Convert to domain and call service
 	answerDomain := req.ToDomain()
 	if err := h.coreService.Submit(ctx, c.UserContext(), req.SubmissionID, req.QuestionID, answerDomain); err != nil {
@@ -161,6 +168,9 @@ func (h *CoreHandler) SubmitHandler(c *fiber.Ctx) error {
 		})
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return presenter.SendError(c, fiber.StatusNotFound, apperrors.ErrNotFound.Error())
+		}
+		if err == apperrors.ErrSubmissionNotInProgress || err == apperrors.ErrSubmissionNoQuestion || err == apperrors.ErrSubmissionNotFoundQuestion {
+			return presenter.SendError(c, fiber.StatusNotFound, err.Error())
 		}
 		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
 	}

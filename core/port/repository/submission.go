@@ -36,6 +36,10 @@ func (r *SubmissionRepository) GetSubmissionByID(ctx context.Context, userCtx co
 	}
 	var sub model.UserSubmission
 	if err := db.WithContext(ctx).Where("id = ?", submissionID).Preload("Answers").First(&sub).Error; err != nil {
+		logger.GetLogger().LogWarningFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogSubmitRepo,
+			Message: "submission not found",
+		})
 		return nil, err
 	}
 	return &sub, nil

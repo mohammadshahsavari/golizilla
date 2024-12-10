@@ -9,14 +9,14 @@ import (
 )
 
 type CreateQuestionnaireRequest struct {
-	StartTime      time.Time     `json:"start_time"`
-	EndTime        time.Time     `json:"end_time"`
-	Random         bool          `json:"random"`
-	BackCompatible bool          `json:"back_compatible"`
-	Title          string        `json:"title"`
-	AnswerTime     time.Duration `json:"answer_time"`
-	Anonymous      bool          `json:"anonymous"`
-	SubmitLimit    uint          `json:"submit_limit,omitempty"`
+	StartTime      time.Time `json:"start_time"`
+	EndTime        time.Time `json:"end_time"`
+	Random         bool      `json:"random"`
+	BackCompatible bool      `json:"back_compatible"`
+	Title          string    `json:"title"`
+	AnswerTime     uint      `json:"answer_time"`
+	Anonymous      bool      `json:"anonymous"`
+	SubmitLimit    uint      `json:"submit_limit,omitempty"`
 	//TODO: Questions
 }
 
@@ -46,17 +46,17 @@ type CreateQuestionnaireResponseData struct {
 }
 
 type GetQuestionnaireResponseData struct {
-	Id                 uuid.UUID     `json:"id"`
-	OwnerId            uuid.UUID     `json:"owner_id"`
-	CreatedTime        time.Time     `json:"created_time"`
-	StartTime          time.Time     `json:"start_time"`
-	EndTime            time.Time     `json:"end_time"`
-	Random             bool          `json:"random"`
-	BackCompatible     bool          `json:"back_compatible"`
-	Title              string        `json:"title"`
-	AnswerTime         time.Duration `json:"answer_time"`
-	ParticipationCount uint          `json:"particpation_count"`
-	Anonymous          bool          `json:"anonymous"`
+	Id                 uuid.UUID `json:"id"`
+	OwnerId            uuid.UUID `json:"owner_id"`
+	CreatedTime        time.Time `json:"created_time"`
+	StartTime          time.Time `json:"start_time"`
+	EndTime            time.Time `json:"end_time"`
+	Random             bool      `json:"random"`
+	BackCompatible     bool      `json:"back_compatible"`
+	Title              string    `json:"title"`
+	AnswerTime         uint      `json:"answer_time"`
+	ParticipationCount uint      `json:"particpation_count"`
+	Anonymous          bool      `json:"anonymous"`
 }
 
 func (req *CreateQuestionnaireRequest) Validate() error {

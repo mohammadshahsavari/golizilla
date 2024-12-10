@@ -15,7 +15,7 @@ type Questionnaire struct {
 	Random             bool
 	BackCompatible     bool
 	Title              string
-	AnswerTime         time.Duration `gorm:"not null"`
+	AnswerTime         uint `gorm:"not null"`
 	ParticipationCount uint
 	Anonymous          bool
 	SubmitLimit        uint

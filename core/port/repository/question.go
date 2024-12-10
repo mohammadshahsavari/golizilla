@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	myContext "golizilla/adapters/http/handler/context"
 	"golizilla/core/domain/model"
@@ -63,10 +64,13 @@ func (r *QuestionRepository) GetByID(ctx context.Context, userCtx context.Contex
 		db = r.db
 	}
 	var question model.Question
-	err := db.WithContext(ctx).Where("id = ?", id).First(&question).Error
-	if err != nil {
-		return nil, apperrors.ErrQuestionsNotFound
+	if err := r.db.WithContext(userCtx).Preload("Options").First(&question, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.ErrNotFound
+		}
+		return nil, err
 	}
+
 	return &question, nil
 }
 

@@ -178,7 +178,7 @@ func (c *CoreService) Back(ctx context.Context, userCtx context.Context, submiss
 		if err != nil {
 			return nil, err
 		}
-		return questions[submission.CurrentQuestionIndex], nil
+		return c.questionRepo.GetByID(ctx, userCtx, questions[submission.CurrentQuestionIndex].ID)
 	}
 
 	return nil, fmt.Errorf("cannot go back")
@@ -200,7 +200,7 @@ func (c *CoreService) Next(ctx context.Context, userCtx context.Context, submiss
 		if err := c.submissionRepo.UpdateSubmission(ctx, userCtx, submission); err != nil {
 			return nil, err
 		}
-		return questions[submission.CurrentQuestionIndex], nil
+		return c.questionRepo.GetByID(ctx, userCtx, questions[submission.CurrentQuestionIndex].ID)
 	}
 
 	return nil, fmt.Errorf("no more questions")

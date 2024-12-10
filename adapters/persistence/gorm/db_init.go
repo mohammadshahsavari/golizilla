@@ -94,6 +94,7 @@ func createSuperAdmin(db *gorm.DB, cfg *config.Config) error {
 		NationalID: cfg.AdminNationalID,
 		Password:   cfg.AdminPassword,
 		RoleId:     role.ID,
+		IsActive: true,
 	}
 	return db.Create(admin).Error
 }

@@ -25,29 +25,30 @@ func SetupQuestionnaireRoutes(
 
 	questionnaireHandler := handler.NewQuestionnaireHandler(questionnaireService, roleService, userService, questionService)
 
-	authMiddleware := middleware.AuthMiddleware(cfg)
+	questionnaireGroup.Use(middleware.AuthMiddleware(cfg))
 	authorizationMiddleware := middleware.AuthorizationMiddleware(authorizationService)
 	headerAuthMiddleware := middleware.HeaderAuthMiddleware(cfg)
+	questionnaireGroup.Use(middleware.ContextMiddleware())
 
 	questionnaireGroup.Post("/",
-		authMiddleware, authorizationMiddleware(privilegeconstants.CreateQuestionnaire), questionnaireHandler.Create)
+		authorizationMiddleware(privilegeconstants.CreateQuestionnaire), questionnaireHandler.Create)
 
 	questionnaireGroup.Get("/:id",
-		authMiddleware, questionnaireHandler.GetById)
+		questionnaireHandler.GetById)
 
 	questionnaireGroup.Get("/ownerId/:id",
-		authMiddleware, questionnaireHandler.GetByOwnerId)
+		questionnaireHandler.GetByOwnerId)
 
 	questionnaireGroup.Put("/update/:id",
-		authMiddleware, questionnaireHandler.Update)
+		questionnaireHandler.Update)
 
 	questionnaireGroup.Delete("/:id",
-		authMiddleware, questionnaireHandler.Delete)
+		questionnaireHandler.Delete)
 
 	questionnaireGroup.Get("/GetResults/:id",
 		headerAuthMiddleware, websocket.New(questionnaireHandler.GetResults))
 
-	questionnaireGroup.Post("/GiveAcess/:id", authMiddleware, questionnaireHandler.GiveAcess)
+	questionnaireGroup.Post("/GiveAcess/:id", questionnaireHandler.GiveAcess)
 
-	questionnaireGroup.Post("/DeleteAcess/:id", authMiddleware, questionnaireHandler.DeleteAcess)
+	questionnaireGroup.Post("/DeleteAcess/:id", questionnaireHandler.DeleteAcess)
 }

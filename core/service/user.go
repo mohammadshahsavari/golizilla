@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golizilla/adapters/persistence/logger"
 	"golizilla/core/domain/model"
 	"golizilla/core/port/repository"
 	"golizilla/internal/apperrors"
+	logmessages "golizilla/internal/logmessages"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,7 +24,7 @@ type IUserService interface {
 	VerifyEmail(ctx context.Context, userCtx context.Context, email, code string) error
 	UpdateUser(ctx context.Context, userCtx context.Context, user *model.User) error
 	// profile services
-	UpdateProfile(ctx context.Context, userCtx context.Context, user *model.User) error
+	UpdateProfile(ctx context.Context, userCtx context.Context, userID uuid.UUID, user *model.User) error
 	GetNotificationList(ctx context.Context, userCtx context.Context, userId uuid.UUID) ([]*model.Notification, error)
 	TransferMoney(ctx context.Context, userCtx context.Context, srcEmail string, dstEmail string, amount uint) error
 	CreateNotification(ctx context.Context, userCtx context.Context, userId uuid.UUID, notification string) error
@@ -41,6 +43,10 @@ func NewUserService(userRepo repository.IUserRepository, emailService IEmailServ
 }
 
 func (s *UserService) CreateUser(ctx context.Context, userCtx context.Context, user *model.User) error {
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserService,
+		Message: logmessages.LogUserCreateSuccessful,
+	})
 	return s.UserRepo.Create(ctx, userCtx, user)
 }
 
@@ -84,8 +90,11 @@ func (s *UserService) AuthenticateUser(ctx context.Context, userCtx context.Cont
 		if user.FailedLoginAttempts >= 5 {
 			user.AccountLocked = true
 			user.AccountLockedUntil = time.Now().Add(15 * time.Minute)
+			logger.GetLogger().LogWarningFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogUserService,
+				Message: "account locked",
+			})
 		}
-		s.UserRepo.Update(ctx, userCtx, user)
 		return nil, apperrors.ErrInvalidCredentials
 	}
 
@@ -94,6 +103,12 @@ func (s *UserService) AuthenticateUser(ctx context.Context, userCtx context.Cont
 	user.AccountLocked = false
 	user.AccountLockedUntil = time.Time{}
 	s.UserRepo.Update(ctx, userCtx, user)
+	s.UserRepo.Update(ctx, userCtx, user)
+
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserService,
+		Message: logmessages.LogUserLoginSuccessful,
+	})
 
 	return user, nil
 }
@@ -117,16 +132,16 @@ func (s *UserService) UpdateUser(ctx context.Context, userCtx context.Context, u
 	return s.UserRepo.Update(ctx, userCtx, user)
 }
 
-func (s *UserService) UpdateProfile(ctx context.Context, userCtx context.Context, updatedUser *model.User) error {
+func (s *UserService) UpdateProfile(ctx context.Context, userCtx context.Context, userID uuid.UUID, updatedUser *model.User) error {
 	// Validate input
 	if updatedUser == nil {
 		return fmt.Errorf("updated user information must not be nil")
 	}
 
 	// Fetch the existing user
-	existingUser, err := s.UserRepo.FindByID(ctx, userCtx, updatedUser.ID)
+	existingUser, err := s.UserRepo.FindByID(ctx, userCtx, userID)
 	if err != nil {
-		return fmt.Errorf("failed to find user with ID %s: %w", updatedUser.ID, err)
+		return fmt.Errorf("failed to find user with ID %s: %w", userID, err)
 	}
 
 	// Check if DateOfBirth can be updated

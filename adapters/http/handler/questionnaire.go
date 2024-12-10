@@ -178,7 +178,7 @@ func (q *QuestionnaireHandler) Update(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	hasPrivilege, err := q.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), id, request.ID, privilegeconstants.UpdateQuestionnaireInstance)
+	hasPrivilege, err := q.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), c.Locals("user_id").(uuid.UUID), request.ID, privilegeconstants.UpdateQuestionnaireInstance)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
@@ -240,7 +240,7 @@ func (q *QuestionnaireHandler) GetById(c *fiber.Ctx) error {
 	}
 	questionnaire, err := q.questionnaireService.GetById(ctx, c.UserContext(), id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == apperrors.ErrQuestionnaireNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogQuestionnaireHandler,
 				Message: err.Error(),
@@ -314,7 +314,7 @@ func (q *QuestionnaireHandler) GetByOwnerId(c *fiber.Ctx) error {
 	}
 	questionnaires, err := q.questionnaireService.GetByOwnerId(ctx, c.UserContext(), id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == apperrors.ErrQuestionnaireNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogQuestionnaireHandler,
 				Message: err.Error(),
@@ -362,7 +362,7 @@ func (q *QuestionnaireHandler) GiveAcess(c *fiber.Ctx) error {
 	}
 	isOwner, err := q.questionnaireService.IsOwner(ctx, c.UserContext(), id, userID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == apperrors.ErrQuestionsNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogQuestionnaireHandler,
 				Message: err.Error(),
@@ -573,7 +573,7 @@ func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {
 	}
 	_, err = q.questionnaireService.GetById(context.Background(), nil, id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == apperrors.ErrQuestionsNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogQuestionnaireHandler,
 				Message: err.Error(),

@@ -15,7 +15,7 @@ type Role struct {
 	UpdatedAt      time.Time
 	Users          []*User          `gorm:"foreinKey:RoleId"`
 	Privileges     []*Privilege     `gorm:"many2many:RolePrivilege"`
-	Questionnaires []*Questionnaire `gorm:"many2many:RolePrivilegeOnQuestionnaire"`
+	Questionnaires []*Questionnaire `gorm:"many2many:RolePrivilegeOnInstance"`
 }
 
 // BeforeCreate is a GORM hook to generate a UUID before creating a new record.

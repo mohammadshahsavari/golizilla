@@ -34,6 +34,8 @@ type DeleteAcessRequest struct {
 
 type UpdateQuestionnaireRequest struct {
 	ID             uuid.UUID      `json:"id"` // Mandatory for updates
+	StartTime      time.Time      `json:"start_time,omitempty"`
+	EndTime        time.Time      `json:"end_time,omitempty"`
 	Random         *bool          `json:"random,omitempty"`
 	BackCompatible *bool          `json:"back_compatible,omitempty"`
 	Title          *string        `json:"title,omitempty"`

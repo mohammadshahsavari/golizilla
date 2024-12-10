@@ -59,7 +59,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 
 	// Validate the request
 	if err := request.Validate(); err != nil {
-		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+		logger.GetLogger().LogWarningFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
 			Message: err.Error(),
 		})
@@ -77,7 +77,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 
 	role, err := h.RoleService.CreateRole(ctx, userCtx, user.Username, "Default")
 	if err != nil {
-		// c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
+
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
 			Message: err.Error(),
@@ -87,7 +87,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 
 	//add more privileges
 	if err := h.RoleService.AddPrivilege(ctx, userCtx, role.ID, privilegeconstants.CreateQuestionnaire); err != nil {
-		// c.Context().Logger().Printf("[CreateRole] Internal error: %v", err)
+
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
 			Message: err.Error(),
@@ -102,15 +102,16 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			logger.GetLogger().LogWarningFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogUserHandler,
-				Message: apperrors.ErrEmailAlreadyExists.Error(),
+				Message: apperrors.ErrRecordAlreadyExists.Error(),
 			})
-			return presenter.SendError(c, fiber.StatusConflict, apperrors.ErrEmailAlreadyExists.Error())
+			return presenter.SendError(c, fiber.StatusConflict, apperrors.ErrRecordAlreadyExists.Error())
 		}
-		// c.Context().Logger().Printf("[CreateUser] Internal error: %v", err)
+
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
 			Message: err.Error(),
 		})
+
 		return h.handleError(c, err)
 	}
 
@@ -523,9 +524,8 @@ func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 	}
 
 	user := request.ToDomain()
-	user.ID = userID
 
-	err := h.UserService.UpdateProfile(ctx, userCtx, user)
+	err := h.UserService.UpdateProfile(ctx, userCtx, userID, user)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -535,7 +535,17 @@ func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
-	err = presenter.Send(c, fiber.StatusOK, true, "user profile updated successfully", presenter.NewUserResponse(user), nil)
+	// Attempt to fetch the user
+	updatedUser, err := h.UserService.GetUserByID(ctx, c.UserContext(), userID)
+	if err != nil {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserHandler,
+			Message: err.Error(),
+		})
+		return h.handleError(c, err)
+	}
+
+	err = presenter.Send(c, fiber.StatusOK, true, "user profile updated successfully", presenter.NewUserResponse(updatedUser), nil)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogUserHandler,
@@ -838,7 +848,7 @@ func (h *UserHandler) handleError(c *fiber.Ctx, err error) error {
 		return presenter.SendError(c, fiber.StatusUnauthorized, err.Error())
 	case errors.Is(err, apperrors.ErrAccountLocked):
 		return presenter.SendError(c, fiber.StatusForbidden, err.Error())
-	case errors.Is(err, apperrors.ErrEmailAlreadyExists):
+	case errors.Is(err, apperrors.ErrRecordAlreadyExists):
 		return presenter.SendError(c, fiber.StatusConflict, err.Error())
 	case errors.Is(err, apperrors.ErrFailedToSendEmail):
 		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())

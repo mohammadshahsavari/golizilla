@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	myContext "golizilla/adapters/http/handler/context"
+	"golizilla/adapters/persistence/logger"
 	"golizilla/core/domain/model"
+	"golizilla/internal/logmessages"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -34,7 +36,10 @@ func (r *UserRepository) Create(ctx context.Context, userCtx context.Context, us
 	if db = myContext.GetDB(userCtx); db == nil {
 		db = r.db
 	}
-
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserRepository,
+		Message: logmessages.LogUserCreateSuccessful,
+	})
 	return db.WithContext(ctx).Create(user).Error
 }
 
@@ -49,8 +54,16 @@ func (r *UserRepository) FindByEmail(ctx context.Context, userCtx context.Contex
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, gorm.ErrRecordNotFound
 		}
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserRepository,
+			Message: err.Error(),
+		})
 		return nil, fmt.Errorf("failed to find user by email: %w", err)
 	}
+	logger.GetLogger().LogInfoFromContext(ctx, logger.LogFields{
+		Service: logmessages.LogUserRepository,
+		Message: logmessages.LogUserLoginSuccessful,
+	})
 	return &user, nil
 }
 
@@ -68,11 +81,24 @@ func (r *UserRepository) FindByID(ctx context.Context, userCtx context.Context, 
 }
 
 func (r *UserRepository) Update(ctx context.Context, userCtx context.Context, user *model.User) error {
+	// Retrieve the database instance from context
 	var db *gorm.DB
 	if db = myContext.GetDB(userCtx); db == nil {
 		db = r.db
 	}
-	return db.WithContext(ctx).Save(user).Error
+
+	// Perform the update
+	err := db.WithContext(ctx).Model(&model.User{}).Where("id = ?", user.ID).Updates(user).Error
+	if err != nil {
+		// Log the error
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogUserRepository,
+			Message: "error updating profile",
+		})
+		return err
+	}
+
+	return nil
 }
 
 func (r *UserRepository) CreateNotification(ctx context.Context, userCtx context.Context, userId uuid.UUID, notification *model.Notification) error {

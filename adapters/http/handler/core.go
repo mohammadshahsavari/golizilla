@@ -42,24 +42,39 @@ func (h *CoreHandler) StartHandler(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusUnprocessableEntity, err.Error())
 	}
 
-	// Check if the user has privileges to start the questionnaire
-	hasPrivilege, err := h.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), req.UserID, req.QuestionnaireID, privilegeconstants.StartQuestionnariInsance)
+	// Check if the questionnaire is active
+	isAnonymous, err := h.questionnaireService.IsQuestionnaireAnonymous(ctx, c.UserContext(), req.QuestionnaireID)
 	if err != nil {
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
 			Message: err.Error(),
 		})
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return presenter.SendError(c, fiber.StatusNotFound, "questionnaire not found")
+			return presenter.SendError(c, fiber.StatusNotFound, apperrors.ErrQuestionnaireNotFound.Error())
 		}
 		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
 	}
-	if !hasPrivilege {
-		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
-			Service: logmessages.LogQuestionnaireHandler,
-			Message: logmessages.LogLackOfAuthorization,
-		})
-		return presenter.SendError(c, fiber.StatusForbidden, apperrors.ErrLackOfAuthorization.Error())
+
+	if isAnonymous {
+		// Check if the user has privileges to start the questionnaire
+		hasPrivilege, err := h.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), req.UserID, req.QuestionnaireID, privilegeconstants.StartQuestionnariInsance)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return presenter.SendError(c, fiber.StatusNotFound, "questionnaire not found")
+			}
+			return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
+		}
+		if !hasPrivilege {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: logmessages.LogLackOfAuthorization,
+			})
+			return presenter.SendError(c, fiber.StatusForbidden, apperrors.ErrLackOfAuthorization.Error())
+		}
 	}
 
 	// Check if the questionnaire is active

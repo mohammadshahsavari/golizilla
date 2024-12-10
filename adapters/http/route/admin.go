@@ -23,12 +23,13 @@ func SetupAdminRoutes(
 	adminHandler := handler.NewAdminHandler(adminService)
 
 	// Initialize the JWT middleware with the config
-	authMiddleware := middleware.AuthMiddleware(cfg)
+	adminGroup.Use(middleware.AuthMiddleware(cfg))
+	adminGroup.Use(middleware.ContextMiddleware())
 
 	// Protected routes
-	adminGroup.Get("/users", authMiddleware, adminHandler.GetAllUsers)
-	adminGroup.Get("/questions", authMiddleware, adminHandler.GetAllQuestions)
-	adminGroup.Get("/questionnaires", authMiddleware, adminHandler.GetAllQuestionnaires)
-	adminGroup.Get("/roles", authMiddleware, adminHandler.GetAllRoles)
-	adminGroup.Get("/users/:userID/questionnaires/:questionnaireID", authMiddleware, adminHandler.GetAnswersByUserIDAndQuestionnaireID)
+	adminGroup.Get("/users", adminHandler.GetAllUsers)
+	adminGroup.Get("/questions", adminHandler.GetAllQuestions)
+	adminGroup.Get("/questionnaires", adminHandler.GetAllQuestionnaires)
+	adminGroup.Get("/roles", adminHandler.GetAllRoles)
+	adminGroup.Get("/users/:userID/questionnaires/:questionnaireID", adminHandler.GetAnswersByUserIDAndQuestionnaireID)
 }

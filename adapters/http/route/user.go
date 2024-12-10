@@ -31,14 +31,14 @@ func SetupUserRoutes(
 	userGroup.Post("/verify-login", userHandler.VerifyLogin)
 
 	// Initialize the JWT middleware with the config
-	authMiddleware := middleware.AuthMiddleware(cfg)
+	userGroup.Use(middleware.AuthMiddleware(cfg))
 	userGroup.Use(middleware.ContextMiddleware())
 
 	// Protected routes
-	userGroup.Get("/profile", authMiddleware, userHandler.GetProfile)
-	userGroup.Put("/profile/update", authMiddleware, userHandler.UpdateProfile)
-	userGroup.Get("/profile/notifications", authMiddleware, userHandler.GetNotificationListList)
-	userGroup.Post("/enable-2fa", authMiddleware, userHandler.Enable2FA)
-	userGroup.Post("/disable-2fa", authMiddleware, userHandler.Disable2FA)
-	userGroup.Post("/logout", authMiddleware, userHandler.Logout)
+	userGroup.Get("/profile", userHandler.GetProfile)
+	userGroup.Put("/profile/update", userHandler.UpdateProfile)
+	userGroup.Get("/profile/notifications", userHandler.GetNotificationListList)
+	userGroup.Post("/enable-2fa", userHandler.Enable2FA)
+	userGroup.Post("/disable-2fa", userHandler.Disable2FA)
+	userGroup.Post("/logout", userHandler.Logout)
 }

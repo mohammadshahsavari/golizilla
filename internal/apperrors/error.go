@@ -10,7 +10,7 @@ var (
 	ErrInvalidCredentials      = errors.New("invalid email or password")
 	ErrInvalidVerificationCode = errors.New("invalid or expired verification code")
 	ErrAccountLocked           = errors.New("your account is locked. please try again later")
-	ErrEmailAlreadyExists      = errors.New("email already in use")
+	ErrRecordAlreadyExists     = errors.New("record already in use")
 	ErrNotFound                = errors.New("resource not found")
 	ErrInternalServerError     = errors.New("internal server error")
 	ErrInvalidTwoFACode        = errors.New("invalid or expired 2FA code")

@@ -3,9 +3,10 @@ package presenter
 import (
 	"errors"
 	"golizilla/core/domain/model"
-	"golizilla/core/service/utils"
 	"regexp"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -34,10 +35,10 @@ type Verify2FARequest struct {
 }
 
 type UpdateProfileRequest struct {
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	City        string `json:"city"`
-	DateOfBirth string `json:"date_of_birth"`
+	FirstName   *string    `json:"first_name,omitempty"`
+	LastName    *string    `json:"last_name,omitempty"`
+	City        *string    `json:"city,omitempty"`
+	DateOfBirth *time.Time `json:"date_of_birth,omitempty"`
 }
 
 // Validate validates the CreateUserRequest fields.
@@ -61,7 +62,10 @@ func (r *CreateUserRequest) Validate() error {
 		return errors.New("national ID format is invalid")
 	}
 	if len(r.Password) < 6 {
-		return errors.New("password must be at least 8 characters long")
+		return errors.New("password must be at least 6 characters long")
+	}
+	if !isValidPassword(r.Password) {
+		return errors.New("password must contain at least one number, one uppercase letter, and one lowercase letter")
 	}
 	return nil
 }
@@ -69,6 +73,9 @@ func (r *CreateUserRequest) Validate() error {
 func (r *VerifyEmailRequest) Validate() error {
 	if r.Email == "" {
 		return errors.New("email is required")
+	}
+	if !isValidEmail(r.Email) {
+		return errors.New("email format is invalid") // Email validation
 	}
 	if r.Code == "" {
 		return errors.New("verification code is required")
@@ -80,6 +87,9 @@ func (r *LoginRequest) Validate() error {
 	if r.Email == "" {
 		return errors.New("email is required")
 	}
+	if !isValidEmail(r.Email) {
+		return errors.New("email format is invalid") // Email validation
+	}
 	if r.Password == "" {
 		return errors.New("password is required")
 	}
@@ -90,6 +100,9 @@ func (r *Verify2FARequest) Validate() error {
 	if r.Email == "" {
 		return errors.New("email is required")
 	}
+	if !isValidEmail(r.Email) {
+		return errors.New("email format is invalid") // Email validation
+	}
 	if r.Code == "" {
 		return errors.New("2FA code is required")
 	}
@@ -97,8 +110,10 @@ func (r *Verify2FARequest) Validate() error {
 }
 
 func (r *UpdateProfileRequest) Validate() error {
-	if _, err := utils.ParseDate(r.DateOfBirth); err != nil {
-		return errors.New("invalid date format")
+	if r.DateOfBirth != nil {
+		if r.DateOfBirth.After(time.Now()) {
+			return errors.New("date of birth cant be in future")
+		}
 	}
 	return nil
 }
@@ -114,13 +129,21 @@ func (r *CreateUserRequest) ToDomain() *model.User {
 }
 
 func (r *UpdateProfileRequest) ToDomain() *model.User {
-	dob, _ := utils.ParseDate(r.DateOfBirth)
-	return &model.User{
-		FirstName:   r.FirstName,
-		LastName:    r.LastName,
-		City:        r.City,
-		DateOfBirth: dob,
+	updateFields := &model.User{}
+	if r.City != nil {
+		updateFields.City = *r.City
 	}
+	if r.FirstName != nil {
+		updateFields.FirstName = *r.FirstName
+	}
+	if r.LastName != nil {
+		updateFields.LastName = *r.LastName
+	}
+	if r.DateOfBirth != nil {
+		updateFields.DateOfBirth = *r.DateOfBirth
+	}
+
+	return updateFields
 }
 
 // UserResponse defines the structure of the User object returned to the client.
@@ -165,14 +188,27 @@ func isValidEmail(email string) bool {
 	return re.MatchString(email)
 }
 
-// isValidNationalID validates a national ID format (placeholder).
+// ValidateNationalID validates the Iranian national ID format.
 func ValidateNationalID(nationalID string) error {
-	// Check length
+	// Trim spaces and validate length
+	nationalID = strings.TrimSpace(nationalID)
 	if len(nationalID) != 10 {
 		return errors.New("national ID must be exactly 10 digits")
 	}
 
-	// Parse each digit
+	// Check for repeated digits (e.g., "0000000000", "1111111111")
+	isRepeated := true
+	for i := 1; i < len(nationalID); i++ {
+		if nationalID[i] != nationalID[0] {
+			isRepeated = false
+			break
+		}
+	}
+	if isRepeated {
+		return errors.New("invalid national ID: repeated digits")
+	}
+
+	// Parse digits and calculate the checksum
 	sum := 0
 	for i := 0; i < 9; i++ {
 		digit, err := strconv.Atoi(string(nationalID[i]))
@@ -182,17 +218,36 @@ func ValidateNationalID(nationalID string) error {
 		sum += digit * (10 - i)
 	}
 
-	// Extract check digit
+	// Extract and validate the check digit
 	checkDigit, err := strconv.Atoi(string(nationalID[9]))
 	if err != nil {
 		return errors.New("invalid check digit in national ID")
 	}
 
-	// Calculate modulus and validate
-	sum %= 11
-	if (sum < 2 && checkDigit == sum) || (sum >= 2 && checkDigit == 11-sum) {
+	// Validate using the modulus 11 rule
+	mod := sum % 11
+	if (mod < 2 && checkDigit == mod) || (mod >= 2 && checkDigit == 11-mod) {
 		return nil // Valid national ID
 	}
 
 	return errors.New("invalid national ID format")
+}
+
+func isValidPassword(password string) bool {
+	hasNumber := false
+	hasUpper := false
+	hasLower := false
+
+	for _, char := range password {
+		switch {
+		case char >= '0' && char <= '9':
+			hasNumber = true
+		case char >= 'a' && char <= 'z':
+			hasLower = true
+		case char >= 'A' && char <= 'Z':
+			hasUpper = true
+		}
+	}
+
+	return hasNumber && hasUpper && hasLower
 }

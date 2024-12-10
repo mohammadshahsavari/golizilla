@@ -32,10 +32,6 @@ This option will spin up the API and a PostgreSQL database using Docker Compose.
 5. **Access the API**:
    The API should be running on `http://localhost:8080`.
 
-6. **Access Swagger Documentation**:
-   Swagger documentation is available at `http://localhost:8080/swagger/index.html`.
-   
-   **Note**: Swagger documentation is accessible only when `ENV` is not set to production in the `.env` file.
 
 ### Option 2: Running Locally with Docker for Database Only
 
@@ -73,18 +69,79 @@ In this option, you will run the PostgreSQL database using Docker and run the AP
 7. **Access the API**:
    The API should be running on `http://localhost:8080`.
 
-8. **Access Swagger Documentation**:
-   Swagger documentation is available at `http://localhost:8080/swagger/index.html`.
-   
-   **Note**: Swagger documentation is accessible only when `ENV` is not set to production in the `.env` file.
 
-## Swagger API Documentation
+## Project File Structure
 
-Swagger is used to document and interact with the API.
+This project is designed following **Hexagonal Architecture** (Ports and Adapters) to ensure scalability, maintainability, and separation of concerns.
 
-- **URL**: Once the server is running, Swagger documentation is available at:
-  - `http://localhost:8080/swagger/index.html`
-- You can use Swagger to interact with the API endpoints, view request and response formats, and understand the behavior of different endpoints.
+### Root Directory
+- **`.env` / `.env.example`**: Environment variable configuration files.
+- **`docker-compose.yml` / `Dockerfile`**: Configuration for containerization and running the application.
+- **`go.mod` / `go.sum`**: Go module and dependency management.
+- **`README.md`**: Documentation for the project.
 
-**Note**: Swagger documentation is accessible only when `ENV` is not set to production in the `.env` file.
+---
+
+### Directories Overview
+
+#### `.vscode`
+Contains IDE-specific settings for development, including extensions and formatting rules.
+
+---
+
+#### `adapters`
+Holds external-facing components, connecting the **core logic** with external systems and frameworks.
+
+- **`http`**: Handles HTTP interactions.
+  - **`handler`**: Processes incoming HTTP requests and invokes core services.
+    - **`context`**: Manages request-specific context.
+    - **`middleware`**: Authentication, authorization, and logging middleware.
+    - **`presenter`**: Validates requests and formats responses.
+  - **`route`**: Defines and initializes API routes.
+
+- **`persistence`**: Manages database and logging integrations.
+  - **`gorm`**: Contains database initialization and repository implementations.
+  - **`logger`**: Structured logging system.
+    - **`archive`**: Stores archived logs.
+    - **`server`**: Contains logging service logic.
+
+
+---
+
+#### `cmd`
+Entry point for the application.
+
+- **`http`**: HTTP server setup and initialization.
+
+---
+
+#### `config`
+Centralized configuration management, including environment variable parsing.
+
+---
+
+#### `core`
+The **core business logic** and domain-driven components of the application.
+
+- **`domain/model`**: Domain models such as `User`, `Questionnaire`, and `Answer`.
+- **`port/repository`**: Repository interfaces for external system interactions (e.g., database, cache).
+- **`service`**: Implements business logic and interacts with repositories.
+  - **`utils`**: Contains helper functions used in services.
+
+---
+
+#### `internal`
+Contains internal utilities, constants, and helpers.
+
+- **`apperrors`**: Custom application errors and error handling mechanisms.
+- **`email/template`**: Email templates for notifications (e.g., 2FA, verification emails).
+- **`logmessages`**: Predefined log message templates.
+- **`privilege`**: Privilege constants and role-based access definitions.
+
+---
+
+This structure ensures:
+1. **Separation of Concerns**: Clear distinction between core logic, external integrations, and infrastructure.
+2. **Maintainability**: Each module is isolated and independently testable.
+3. **Scalability**: Easily extendable to support new features or integrations.
 

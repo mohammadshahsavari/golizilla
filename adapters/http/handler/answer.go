@@ -8,6 +8,7 @@ import (
 	"golizilla/core/service"
 	"golizilla/internal/apperrors"
 	logmessages "golizilla/internal/logmessages"
+	privilegeconstants "golizilla/internal/privilege"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -15,12 +16,21 @@ import (
 )
 
 type AnswerHandler struct {
-	answerService service.IAnswerService
+	answerService       service.IAnswerService
+	qustionService      service.IQuestionService
+	questionnariService service.IQuestionnaireService
+	roleService         service.IRoleService
 }
 
-func NewAnswerHandler(answerService service.IAnswerService) *AnswerHandler {
+func NewAnswerHandler(answerService service.IAnswerService,
+	qustionService service.IQuestionService,
+	questionnariService service.IQuestionnaireService,
+	roleService service.IRoleService) *AnswerHandler {
 	return &AnswerHandler{
-		answerService: answerService,
+		answerService:       answerService,
+		qustionService:      qustionService,
+		questionnariService: questionnariService,
+		roleService:         roleService,
 	}
 }
 
@@ -250,6 +260,60 @@ func (h *AnswerHandler) GetByID(c *fiber.Ctx) error {
 			fiber.StatusInternalServerError,
 			apperrors.ErrInternalServerError.Error(),
 		)
+	}
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+			Service: logmessages.LogAnswerHandler,
+			Message: logmessages.LogCastUserIdError,
+		})
+		return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
+	}
+	if answer.UserSubmissionID != userID {
+		question, err := h.qustionService.GetByID(ctx, c.UserContext(), answer.QuestionID)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogAnswerHandler,
+				Message: err.Error(),
+			})
+			return presenter.SendError(c,
+				fiber.StatusInternalServerError,
+				apperrors.ErrInternalServerError.Error(),
+			)
+		}
+
+		questionnari, err := h.questionnariService.GetById(ctx, c.UserContext(), question.QuestionnaireId)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogAnswerHandler,
+				Message: err.Error(),
+			})
+			return presenter.SendError(c,
+				fiber.StatusInternalServerError,
+				apperrors.ErrInternalServerError.Error(),
+			)
+		}
+		if questionnari.OwnerId != userID {
+			hasPrvilege, err := h.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), userID, questionnari.Id, privilegeconstants.SeeVoteOnInstance)
+			if err != nil {
+				logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+					Service: logmessages.LogAnswerHandler,
+					Message: err.Error(),
+				})
+				return presenter.SendError(c,
+					fiber.StatusInternalServerError,
+					apperrors.ErrInternalServerError.Error(),
+				)
+			}
+
+			if !hasPrvilege {
+				logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+					Service: logmessages.LogQuestionnaireHandler,
+					Message: logmessages.LogLackOfAuthorization,
+				})
+				return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrLackOfAuthorization.Error())
+			}
+		}
 	}
 
 	return presenter.Send(c,

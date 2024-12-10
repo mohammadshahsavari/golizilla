@@ -76,9 +76,9 @@ func RunServer(cfg *config.Config, database *gorm.DB) {
 
 	// Setup routes
 	SetupUserRoutes(app, database, cfg, userService, emailService, roleService)
-	SetupQuestionnaireRoutes(app, database, cfg, questionnaireService, authorizationsService, roleService)
+	SetupQuestionnaireRoutes(app, database, cfg, questionnaireService, authorizationsService, roleService, userService, questionService)
 	SetupQuestionRoutes(app, database, cfg, questionService)
-	SetupAnswerRoutes(app, database, cfg, answerService)
+	SetupAnswerRoutes(app, database, cfg, answerService, questionService, questionnaireService, roleService)
 	SetupAdminRoutes(app, database, cfg, adminService)
 	SetupCoreRoutes(app, database, cfg, coreService, roleService, questionnaireService)
 

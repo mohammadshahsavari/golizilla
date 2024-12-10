@@ -15,12 +15,15 @@ func SetupAnswerRoutes(
 	db *gorm.DB,
 	cfg *config.Config,
 	answerService service.IAnswerService,
+	questionService service.IQuestionService,
+	questionnariService service.IQuestionnaireService,
+	roleService service.IRoleService,
 ) {
 	// Create a group for user routes
 	answerGroup := app.Group("/answer")
 
 	// Initialize handlers
-	answerHandler := handler.NewAnswerHandler(answerService)
+	answerHandler := handler.NewAnswerHandler(answerService, questionService, questionnariService, roleService)
 
 	// Initialize the JWT middleware with the config
 	answerGroup.Use(middleware.AuthMiddleware(cfg))

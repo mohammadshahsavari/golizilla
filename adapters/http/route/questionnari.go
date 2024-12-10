@@ -18,10 +18,12 @@ func SetupQuestionnaireRoutes(
 	cfg *config.Config,
 	questionnaireService service.IQuestionnaireService,
 	authorizationService service.IAuthorizationService,
-	roleService service.IRoleService) {
+	roleService service.IRoleService,
+	userService service.IUserService,
+	questionService service.IQuestionService) {
 	questionnaireGroup := app.Group("/questionnaire")
 
-	questionnaireHandler := handler.NewQuestionnaireHandler(questionnaireService, roleService)
+	questionnaireHandler := handler.NewQuestionnaireHandler(questionnaireService, roleService, userService, questionService)
 
 	questionnaireGroup.Use(middleware.AuthMiddleware(cfg))
 	authorizationMiddleware := middleware.AuthorizationMiddleware(authorizationService)

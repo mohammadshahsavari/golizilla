@@ -96,31 +96,31 @@ func HeaderAuthMiddleware(cfg *config.Config) fiber.Handler {
 			return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrInvalidUserID.Error())
 		}
 
-		// Get the session
-		sess, err := Store.Get(c)
-		if err != nil {
-			return presenter.SendError(c, fiber.StatusUnauthorized, "Session not found")
-		}
+		// // Get the session
+		// sess, err := Store.Get(c)
+		// if err != nil {
+		// 	return presenter.SendError(c, fiber.StatusUnauthorized, "Session not found")
+		// }
 
-		// Retrieve the user ID from the session
-		userIDValue := sess.Get("user_id")
-		if userIDValue == nil {
-			return presenter.SendError(c, fiber.StatusUnauthorized, "Unauthorized access")
-		}
+		// // Retrieve the user ID from the session
+		// userIDValue := sess.Get("user_id")
+		// if userIDValue == nil {
+		// 	return presenter.SendError(c, fiber.StatusUnauthorized, "Unauthorized access")
+		// }
 
-		// Assert the type of userIDValue
-		userID, err := uuid.Parse(userIDValue.(string))
-		if err != nil {
-			return presenter.SendError(c, fiber.StatusUnauthorized, "Invalid session data")
-		}
+		// // Assert the type of userIDValue
+		// userID, err := uuid.Parse(userIDValue.(string))
+		// if err != nil {
+		// 	return presenter.SendError(c, fiber.StatusUnauthorized, "Invalid session data")
+		// }
 
-		// check for CSRF
-		if UserIDJWT != userID {
-			return presenter.SendError(c, fiber.StatusUnauthorized, "Unauthorized access")
-		}
+		// // check for CSRF
+		// if UserIDJWT != userID {
+		// 	return presenter.SendError(c, fiber.StatusUnauthorized, "Unauthorized access")
+		// }
 
 		// Store user ID in locals for downstream handlers
-		c.Locals("user_id", userID)
+		c.Locals("user_id", UserIDJWT)
 
 		// Proceed to the next handler
 		return c.Next()

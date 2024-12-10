@@ -20,14 +20,21 @@ import (
 type QuestionnaireHandler struct {
 	questionnaireService service.IQuestionnaireService
 	roleService          service.IRoleService
+	userService          service.IUserService
+	answerService        service.IAnswerService
+	questionService      service.IQuestionService
 }
 
 func NewQuestionnaireHandler(
 	questionnaireService service.IQuestionnaireService,
-	roleService service.IRoleService) *QuestionnaireHandler {
+	roleService service.IRoleService,
+	userService service.IUserService,
+	questionService service.IQuestionService) *QuestionnaireHandler {
 	return &QuestionnaireHandler{
 		questionnaireService: questionnaireService,
 		roleService:          roleService,
+		userService:          userService,
+		questionService:      questionService,
 	}
 }
 
@@ -371,7 +378,21 @@ func (q *QuestionnaireHandler) GiveAcess(c *fiber.Ctx) error {
 	}
 
 	if !isOwner {
-		return presenter.SendError(c, fiber.StatusUnauthorized, "you arent owner of this questionnari")
+		hasPrivilege, err := q.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), userID, id, privilegeconstants.GiveAccessToOthersOnInstance)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
+			return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
+		}
+		if !hasPrivilege {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: logmessages.LogLackOfAuthorization,
+			})
+			return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrLackOfAuthorization.Error())
+		}
 	}
 	var request presenter.GiveAcessRequest
 	if err := c.BodyParser(&request); err != nil {
@@ -398,6 +419,13 @@ func (q *QuestionnaireHandler) GiveAcess(c *fiber.Ctx) error {
 				Message: err.Error(),
 			})
 			return presenter.SendError(c, fiber.StatusBadRequest, "failed to add privilges on instance")
+		}
+		err = q.userService.CreateNotification(ctx, c.UserContext(), user, fmt.Sprintf("Your role changed. permissions added : %v", request.Privileges))
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
 		}
 	}
 
@@ -572,6 +600,26 @@ func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {
 			})
 			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
 			break
+		}
+		qustions, err := q.questionService.GetFullByQuestionnaireID(ctx, nil, questionnaire.Id)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
+			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%s", err)))
+			break
+		}
+		for _, qustion := range qustions {
+			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("qustion is : %v", qustion.QuestionText)))
+
+			for _, answer := range qustion.Answers {
+				if answer.Descriptive {
+					c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("qustion is : %v", answer.Text)))
+				} else {
+					c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("qustion is : %v", answer.Question.Index)))
+				}
+			}
 		}
 		if lastValue != questionnaire.ParticipationCount {
 			lastValue = questionnaire.ParticipationCount

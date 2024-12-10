@@ -45,13 +45,17 @@ func (h *CoreHandler) StartHandler(c *fiber.Ctx) error {
 	// Check if the questionnaire is active
 	isAnonymous, err := h.questionnaireService.IsQuestionnaireAnonymous(ctx, c.UserContext(), req.QuestionnaireID)
 	if err != nil {
+		if errors.Is(err, apperrors.ErrQuestionnaireNotFound) {
+			logger.GetLogger().LogWarningFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: apperrors.ErrQuestionsNotFound.Error(),
+			})
+			return presenter.SendError(c, fiber.StatusNotFound, apperrors.ErrQuestionnaireNotFound.Error())
+		}
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
 			Message: err.Error(),
 		})
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return presenter.SendError(c, fiber.StatusNotFound, apperrors.ErrQuestionnaireNotFound.Error())
-		}
 		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
 	}
 
@@ -80,13 +84,17 @@ func (h *CoreHandler) StartHandler(c *fiber.Ctx) error {
 	// Check if the questionnaire is active
 	isActive, err := h.questionnaireService.IsQuestionnaireActive(ctx, c.UserContext(), req.QuestionnaireID)
 	if err != nil {
+		if errors.Is(err, apperrors.ErrQuestionnaireNotFound) {
+			logger.GetLogger().LogWarningFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: apperrors.ErrQuestionsNotFound.Error(),
+			})
+			return presenter.SendError(c, fiber.StatusNotFound, apperrors.ErrQuestionnaireNotFound.Error())
+		}
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
 			Message: err.Error(),
 		})
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return presenter.SendError(c, fiber.StatusNotFound, apperrors.ErrQuestionnaireNotFound.Error())
-		}
 		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
 	}
 	if !isActive {

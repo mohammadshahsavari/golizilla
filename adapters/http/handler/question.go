@@ -232,7 +232,7 @@ func (h *QuestionHandler) GetByID(c *fiber.Ctx) error {
 			Service: logmessages.LogQuestionHandler,
 			Message: err.Error(),
 		})
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, apperrors.ErrQuestionsNotFound) {
 			return presenter.SendError(c,
 				fiber.StatusNotFound,
 				apperrors.ErrNotFound.Error(),

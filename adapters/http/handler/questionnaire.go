@@ -233,7 +233,7 @@ func (q *QuestionnaireHandler) GetById(c *fiber.Ctx) error {
 	}
 	questionnaire, err := q.questionnaireService.GetById(ctx, c.UserContext(), id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == apperrors.ErrQuestionnaireNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogQuestionnaireHandler,
 				Message: err.Error(),
@@ -355,7 +355,7 @@ func (q *QuestionnaireHandler) GiveAcess(c *fiber.Ctx) error {
 	}
 	isOwner, err := q.questionnaireService.IsOwner(ctx, c.UserContext(), id, userID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == apperrors.ErrQuestionsNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogQuestionnaireHandler,
 				Message: err.Error(),
@@ -545,7 +545,7 @@ func (q *QuestionnaireHandler) GetResults(c *websocket.Conn) {
 	}
 	_, err = q.questionnaireService.GetById(context.Background(), nil, id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == apperrors.ErrQuestionsNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogQuestionnaireHandler,
 				Message: err.Error(),

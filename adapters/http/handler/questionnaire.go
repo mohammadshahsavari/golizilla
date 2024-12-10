@@ -178,22 +178,39 @@ func (q *QuestionnaireHandler) Update(c *fiber.Ctx) error {
 		return presenter.SendError(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	hasPrivilege, err := q.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), c.Locals("user_id").(uuid.UUID), request.ID, privilegeconstants.UpdateQuestionnaireInstance)
+	isOwner, err := q.questionnaireService.IsOwner(ctx, c.UserContext(), c.Locals("user_id").(uuid.UUID), id)
 	if err != nil {
+		if err == apperrors.ErrQuestionsNotFound {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
+			return presenter.SendError(c, fiber.StatusNotFound, err.Error())
+		}
+
 		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 			Service: logmessages.LogQuestionnaireHandler,
 			Message: err.Error(),
 		})
-		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
+		return presenter.SendError(c, fiber.StatusInternalServerError, err.Error())
 	}
-	if !hasPrivilege {
-		logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
-			Service: logmessages.LogQuestionnaireHandler,
-			Message: logmessages.LogLackOfAuthorization,
-		})
-		return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrLackOfAuthorization.Error())
+	if !isOwner {
+		hasPrivilege, err := q.roleService.HasPrivilegesOnInsance(ctx, c.UserContext(), c.Locals("user_id").(uuid.UUID), request.ID, privilegeconstants.UpdateQuestionnaireInstance)
+		if err != nil {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: err.Error(),
+			})
+			return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrInternalServerError.Error())
+		}
+		if !hasPrivilege {
+			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
+				Service: logmessages.LogQuestionnaireHandler,
+				Message: logmessages.LogLackOfAuthorization,
+			})
+			return presenter.SendError(c, fiber.StatusInternalServerError, apperrors.ErrLackOfAuthorization.Error())
+		}
 	}
-
 	// Map fields to update
 	updateFields := request.ToDomain()
 

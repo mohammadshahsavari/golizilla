@@ -124,5 +124,6 @@ func NewStartResponse(submissionID uuid.UUID, question *model.Question) map[stri
 		"index":            question.Index,
 		"question_text":    question.QuestionText,
 		"descriptive":      question.Descriptive,
+		"options":          question.Options,
 	}
 }

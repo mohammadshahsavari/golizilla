@@ -307,7 +307,7 @@ func (q *QuestionnaireHandler) GetByOwnerId(c *fiber.Ctx) error {
 	}
 	questionnaires, err := q.questionnaireService.GetByOwnerId(ctx, c.UserContext(), id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if err == apperrors.ErrQuestionnaireNotFound {
 			logger.GetLogger().LogErrorFromContext(ctx, logger.LogFields{
 				Service: logmessages.LogQuestionnaireHandler,
 				Message: err.Error(),

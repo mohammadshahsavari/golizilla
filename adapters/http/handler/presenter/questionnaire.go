@@ -23,13 +23,11 @@ type CreateQuestionnaireRequest struct {
 type GiveAcessRequest struct {
 	UserIDs    []uuid.UUID `json:"user_ids"`
 	Privileges []string    `json:"privileges"`
-	AllUsers   bool        `json:"all_users"`
 }
 
 type DeleteAcessRequest struct {
 	UserIDs    []uuid.UUID `json:"user_ids"`
 	Privileges []string    `json:"privileges"`
-	AllUsers   bool        `json:"all_users"`
 }
 
 type UpdateQuestionnaireRequest struct {

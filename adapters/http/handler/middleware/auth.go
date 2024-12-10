@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"golizilla/adapters/http/handler/presenter"
 	"golizilla/adapters/persistence/logger"
 	"golizilla/config"
@@ -22,7 +21,7 @@ func AuthMiddleware(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Extract the token from cookies
 		tokenString := c.Cookies("auth_token")
-		fmt.Print(tokenString)
+
 		if tokenString == "" {
 			return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrMissingAuthToken.Error())
 		}
@@ -63,9 +62,8 @@ func AuthMiddleware(cfg *config.Config) fiber.Handler {
 
 func HeaderAuthMiddleware(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Extract the token from cookies
 		tokenString := c.Get("auth_token")
-		fmt.Print(tokenString)
+
 		if tokenString == "" {
 			return presenter.SendError(c, fiber.StatusUnauthorized, apperrors.ErrMissingAuthToken.Error())
 		}

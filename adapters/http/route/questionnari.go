@@ -25,9 +25,13 @@ func SetupQuestionnaireRoutes(
 
 	questionnaireHandler := handler.NewQuestionnaireHandler(questionnaireService, roleService, userService, questionService)
 
+	headerAuthMiddleware := middleware.HeaderAuthMiddleware(cfg)
+	questionnaireGroup.Get("/GetResults/:id",
+		headerAuthMiddleware, websocket.New(questionnaireHandler.GetResults))
+
 	questionnaireGroup.Use(middleware.AuthMiddleware(cfg))
 	authorizationMiddleware := middleware.AuthorizationMiddleware(authorizationService)
-	headerAuthMiddleware := middleware.HeaderAuthMiddleware(cfg)
+
 	questionnaireGroup.Use(middleware.ContextMiddleware())
 
 	questionnaireGroup.Post("/",
@@ -44,9 +48,6 @@ func SetupQuestionnaireRoutes(
 
 	questionnaireGroup.Delete("/:id",
 		questionnaireHandler.Delete)
-
-	questionnaireGroup.Get("/GetResults/:id",
-		headerAuthMiddleware, websocket.New(questionnaireHandler.GetResults))
 
 	questionnaireGroup.Post("/GiveAcess/:id", questionnaireHandler.GiveAcess)
 

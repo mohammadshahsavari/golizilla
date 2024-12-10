@@ -96,7 +96,7 @@ func (r *QuestionRepository) GetFullByQuestionnaireID(ctx context.Context, userC
 	}
 
 	var questions []*model.Question
-	if err := db.WithContext(ctx).Preload("Answers").Where("questionnaire_id = ?", questionnaireID).Order("index ASC").Find(&questions).Error; err != nil {
+	if err := db.WithContext(ctx).Preload("Answers").Preload("Options").Where("questionnaire_id = ?", questionnaireID).Order("index ASC").Find(&questions).Error; err != nil {
 		return nil, err
 	}
 
